@@ -1,22 +1,12 @@
 import './env';
-import express from 'express';
-import cors from 'cors';
-import { authService } from './firebase';
+import config from './config';
+import './firebase';
 
-const app = express();
-const port = 8000;
+import server from './server';
+import logger from './utils/logger';
 
-app.use(cors());
+const port = config.port ?? 8000;
 
-app.get('/', (req, res) => {
-  console.log('/');
-  res.send('Hello World');
-});
-
-app.get('/auth', (req, res) => {
-  res.send(authService.currentUser);
-});
-
-app.listen(port, () => {
-  console.log(`app listening on port ${port}`);
+server.listen(port, () => {
+  logger.debug(`app listening on port ${port}`);
 });
