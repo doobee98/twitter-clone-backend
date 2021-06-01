@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { RequestHandler } from 'express';
-import { databaseService } from '../../firebase';
+import { databaseService } from '../firebase';
 import * as jwt from 'jsonwebtoken';
 import User from 'models/User';
 import config from '../../config';

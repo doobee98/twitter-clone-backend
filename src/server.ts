@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import api from './api';
-import { handleError } from './utils/errorHandler';
 import { checkAuthToken } from './api/auth/auth.lib';
+import { handleError } from './utils/errorHandler';
 
 const app = express();
 

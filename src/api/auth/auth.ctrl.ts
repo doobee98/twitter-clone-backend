@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import User from 'models/User';
-import { databaseService } from '../../firebase';
+import { databaseService } from '../firebase';
 import * as AuthLib from './auth.lib';
 
 export const currentUser: RequestHandler = async (req, res, next) => {
