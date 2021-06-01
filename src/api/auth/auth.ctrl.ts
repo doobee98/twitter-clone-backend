@@ -92,10 +92,9 @@ export const signup: RequestHandler = async (req, res, next) => {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
-      following_num: 0,
-      follower_num: 0,
-      created_at: currentDate,
-      last_logined_at: currentDate,
+      following_count: 0,
+      follower_count: 0,
+      joined_at: currentDate,
     };
 
     await userDatabase.add(newId, newUser);

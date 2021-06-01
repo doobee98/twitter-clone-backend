@@ -1,19 +1,27 @@
 /**
  * @typedef User
- * @property {string} user_id
- * @property {string} username
- * @property {number} following_num
- * @property {number} follower_num
- * @property {string} created_at
- * @property {string} last_logined_at
+ * @property {string} user_id.required
+ * @property {string} username.required
+ * @property {number} following_count.required
+ * @property {number} follower_count.required
+ * @property {string} joined_at.required
+ * @property {string} profile_img_src
+ * @property {string} bio - 자기소개
+ * @property {string} website
+ * @property {string} location
  */
 
 export default interface User {
   user_id: string;
-  hashed_password?: string;
   username: string;
-  following_num: number;
-  follower_num: number;
-  created_at: string;
-  last_logined_at: string;
+  following_count: number;
+  follower_count: number;
+  joined_at: string;
+
+  profile_img_src?: string;
+  bio?: string;
+  website?: string;
+  location?: string;
+
+  hashed_password?: string;
 }
