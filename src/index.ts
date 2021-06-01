@@ -1,6 +1,6 @@
 import './env';
 import config from './config';
-import './firebase';
+import './api/firebase';
 
 import server from './server';
 import logger from './utils/logger';
