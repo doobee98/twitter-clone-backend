@@ -1,12 +1,12 @@
 import crypto from 'crypto';
 import { RequestHandler } from 'express';
-import { databaseService } from '../firebase';
+import { userDatabase } from '../firebase';
 import * as jwt from 'jsonwebtoken';
 import User from 'models/User';
 import config from '../../config';
 
 interface JwtCertificate {
-  user_id: number;
+  user_id: string;
   iat: number;
   exp: number;
 }
@@ -54,19 +54,13 @@ export const checkAuthToken: RequestHandler = async (req, res, next) => {
       config.jwtSecretKey,
     ) as JwtCertificate;
 
-    const querySnapshot = await databaseService
-      .collection('user')
-      .where('user_id', '==', user_id)
-      .get();
-
-    if (querySnapshot.size !== 1) {
+    const user = await userDatabase.get(user_id);
+    if (!user) {
       throw new Error('AUTH_LOGIN_TOKEN_IS_COMPROMISED');
     }
 
-    const user = querySnapshot.docs[0].data() as User;
-
     res.locals.user = {
-      user_id: user.user_id,
+      user_id,
     };
 
     next();

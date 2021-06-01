@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import User from 'models/User';
-import { databaseService } from '../firebase';
+import { userDatabase } from '../firebase';
 import * as AuthLib from './auth.lib';
 
 export const currentUser: RequestHandler = async (req, res, next) => {
@@ -21,24 +21,19 @@ export const login: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_ALREADY_LOGINED');
     }
 
-    const { id: user_id, password } = req.body;
-    const hashed_input_password = await AuthLib.createHash(password);
+    const { id, password } = req.body;
+    const hashedInputPassword = await AuthLib.createHash(password);
 
-    const querySnapshot = await databaseService
-      .collection('user')
-      .where('user_id', '==', user_id)
-      .where('hashed_password', '==', hashed_input_password)
-      .get();
+    const user = await userDatabase.get(id);
+    const isCorrectPassword = user?.hashed_password === hashedInputPassword;
 
-    if (querySnapshot.size != 1) {
+    if (!user || !isCorrectPassword) {
       throw new Error('AUTH_INCORRECT_USER_ID_OR_PASSWORD');
     }
 
-    const user = querySnapshot.docs[0].data() as User;
-    const token = AuthLib.createToken(user);
-
     user.hashed_password = undefined;
 
+    const token = AuthLib.createToken(user);
     res.set('Authorization', `Bearer ${token}`);
     res.send(user);
   } catch (error) {
@@ -57,33 +52,27 @@ export const signup: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_ALREADY_LOGINED');
     }
 
-    const { id: user_id, password, username } = req.body;
+    const { id: newId, password, username } = req.body;
 
-    const isAlreadyExistUser = await databaseService
-      .collection('user')
-      .where('user_id', '==', user_id)
-      .get()
-      .then((querySnapshot) => !querySnapshot.empty)
-      .catch(() => false);
-
+    const isAlreadyExistUser = (await userDatabase.get(newId)) !== undefined;
     if (isAlreadyExistUser) {
       throw new Error('AUTH_USER_ID_ALREADY_EXIST');
     }
 
-    const hashed_input_password = await AuthLib.createHash(password);
+    const hashedInputPassword = await AuthLib.createHash(password);
     const currentDate = Date();
 
     const newUser: User = {
-      user_id: user_id,
-      hashed_password: hashed_input_password,
-      username: username,
+      user_id: newId,
+      hashed_password: hashedInputPassword,
+      username,
       following_num: 0,
       follower_num: 0,
       created_at: currentDate,
       last_logined_at: currentDate,
     };
 
-    await databaseService.collection('user').add(newUser);
+    await userDatabase.add(newId, newUser);
     res.send(newUser);
   } catch (error) {
     next(error);
