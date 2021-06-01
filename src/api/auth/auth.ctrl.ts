@@ -3,18 +3,28 @@ import User from 'models/User';
 import { userDatabase } from '../firebase';
 import * as AuthLib from './auth.lib';
 
+// TODO: 테스트용 endpoint
 export const currentUser: RequestHandler = async (req, res, next) => {
   try {
     if (!res.locals.user) {
       throw new Error('AUTH_NOT_LOGINED');
     }
 
-    res.send(res.locals.user);
+    res.status(200).send(res.locals.user);
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * 로그인
+ * @route POST /api/auth/login
+ * @group auth - 계정 관련
+ * @param {LoginEntry.model} loginEntry.body - 로그인 입력
+ * @returns {User.model} 200 - 해당 사용자 정보
+ * @returns {Error} 10405 - 400 이미 로그인 되어 있습니다.
+ * @returns {Error} 10402 - 400 존재하지 않는 아이디이거나 비밀번호가 잘못 입력되었습니다.
+ */
 export const login: RequestHandler = async (req, res, next) => {
   try {
     if (res.locals.user) {
@@ -35,17 +45,33 @@ export const login: RequestHandler = async (req, res, next) => {
 
     const token = AuthLib.createToken(user);
     res.set('Authorization', `Bearer ${token}`);
-    res.send(user);
+    res.status(200).send(user);
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * 로그아웃
+ * @route GET /api/auth/logout
+ * @group auth - 계정 관련
+ * @returns {object} 204 - No Content
+ * @returns {Error} default - Unexpected error
+ */
 export const logout: RequestHandler = async (req, res, next) => {
   res.set('Authorization', '');
   res.status(204).send();
 };
 
+/**
+ * 회원가입
+ * @route POST /api/auth/signup
+ * @group auth - 계정 관련
+ * @param {signupEntry.model} signupEntry.body - 회원가입 입력
+ * @returns {User.model} 201 - 해당 사용자 정보
+ * @returns {Error} 10405 - 400 이미 로그인 되어 있습니다.
+ * @returns {Error} 10401 - 400 이미 존재하는 아이디 입니다.
+ */
 export const signup: RequestHandler = async (req, res, next) => {
   try {
     if (res.locals.user) {
@@ -73,7 +99,7 @@ export const signup: RequestHandler = async (req, res, next) => {
     };
 
     await userDatabase.add(newId, newUser);
-    res.send(newUser);
+    res.status(201).send(newUser);
   } catch (error) {
     next(error);
   }
