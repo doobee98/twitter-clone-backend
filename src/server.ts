@@ -2,14 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import api from './api';
 import { handleError } from './utils/errorHandler';
+import { checkAuthToken } from './api/auth/auth.lib';
 
 const app = express();
 
-app.use(cors());
+// middlewares
+app.use(
+  cors({
+    exposedHeaders: ['Authorization'],
+  }),
+);
 app.use(express.json()); // body-parser
+app.use(checkAuthToken);
 
+// routing
 app.use('/api', api);
 
+// error handler
 app.use(handleError);
 
 export default app;
