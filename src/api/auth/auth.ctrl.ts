@@ -52,6 +52,35 @@ export const login: RequestHandler = async (req, res, next) => {
 };
 
 /**
+ * 로그인 유저 정보 (자동로그인)
+ * @route GET /api/auth/info
+ * @group auth - 계정 관련
+ * @returns {User.model} 200 - 해당 사용자 정보
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10403 - 401 로그인 정보가 훼손되었습니다.
+ */
+export const info: RequestHandler = async (req, res, next) => {
+  try {
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id } = res.locals.user;
+    const user = await userDatabase.get(user_id);
+
+    if (!user) {
+      throw new Error('AUTH_LOGIN_TOKEN_IS_COMPROMISED');
+    }
+
+    user.hashed_password = undefined;
+
+    res.status(200).send(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 로그아웃
  * @route GET /api/auth/logout
  * @group auth - 계정 관련
