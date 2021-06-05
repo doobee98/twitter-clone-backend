@@ -42,6 +42,21 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10406,
     msg: '로그인이 필요합니다.',
   },
+  TWEETS_NOT_EXIST: {
+    statusCode: 404,
+    errorCode: 10501,
+    msg: '존재하지 않는 트윗입니다.',
+  },
+  TWEETS_NO_EDIT_PERMISSION: {
+    statusCode: 401,
+    errorCode: 10502,
+    msg: '해당 트윗 수정 권한이 없습니다.',
+  },
+  TWEETS_NO_EDIT_CONTENT: {
+    statusCode: 400,
+    errorCode: 10503,
+    msg: '트윗 변경 사항이 없습니다.',
+  },
 };
 
 const defaultErrorType = 'INTERNAL_SERVER_ERROR';
