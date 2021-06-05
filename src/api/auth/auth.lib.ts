@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { RequestHandler } from 'express';
 import { userDatabase } from '../firebase';
 import * as jwt from 'jsonwebtoken';
@@ -10,11 +9,6 @@ interface JwtCertificate {
   iat: number;
   exp: number;
 }
-
-export const createHash = async (str: string): Promise<string> => {
-  // TODO: salt 등으로 고도화 필요함
-  return crypto.createHash('sha512').update(str).digest('base64');
-};
 
 export const createToken = (user: User): string => {
   if (!config.jwtSecretKey) {
