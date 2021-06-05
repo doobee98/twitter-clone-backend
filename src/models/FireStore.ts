@@ -4,6 +4,7 @@ import {
   Query,
   WhereFilterOp,
 } from '@firebase/firestore-types';
+import { randomHash } from '../utils';
 
 type Where<T> = [keyof T, WhereFilterOp, any];
 
@@ -14,18 +15,17 @@ class FireStore<T extends DocumentData> {
     this.collection = collection;
   }
 
-  async add(id: string, document: T): Promise<void>;
-  async add(document: T): Promise<void>;
+  async generateAutoId(): Promise<string> {
+    let doc, candidateId;
+    do {
+      candidateId = await randomHash();
+      doc = await this.get(candidateId);
+    } while (!doc);
+    return candidateId;
+  }
 
-  async add(arg1: any, arg2?: any): Promise<void> {
-    if (arg2 !== undefined) {
-      const id: string = arg1;
-      const document: T = arg2;
-      this.collection.doc(id).set(document);
-    } else {
-      const document: T = arg1;
-      this.collection.add(document);
-    }
+  async add(id: string, document: T): Promise<void> {
+    this.collection.doc(id).set(document);
   }
 
   async remove(id: string): Promise<void> {
