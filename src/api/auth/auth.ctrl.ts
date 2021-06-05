@@ -1,5 +1,6 @@
 import { RequestHandler } from 'express';
 import User from 'models/User';
+import { createHash } from '../../utils';
 import { userDatabase } from '../firebase';
 import * as AuthLib from './auth.lib';
 
@@ -32,7 +33,7 @@ export const login: RequestHandler = async (req, res, next) => {
     }
 
     const { id, password } = req.body;
-    const hashedInputPassword = await AuthLib.createHash(password);
+    const hashedInputPassword = await createHash(password);
 
     const user = await userDatabase.get(id);
     const isCorrectPassword = user?.hashed_password === hashedInputPassword;
@@ -114,7 +115,7 @@ export const signup: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_USER_ID_ALREADY_EXIST');
     }
 
-    const hashedInputPassword = await AuthLib.createHash(password);
+    const hashedInputPassword = await createHash(password);
     const currentDate = Date();
 
     const newUser: User = {
