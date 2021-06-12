@@ -1,7 +1,8 @@
 import { RequestHandler } from 'express';
 import Tweet from 'models/Tweet';
-import { tweetDatabase } from '../firebase';
+import { tweetDatabase, tweetLikeDatabase } from '../firebase';
 import { arrayEquals } from '../../utils';
+import * as TweetLib from './tweet.lib';
 
 /**
  * 새로운 트윗 작성
@@ -181,34 +182,80 @@ export const createReply: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * (TODO) 트윗 좋아요
+ * 트윗 좋아요
  * @route POST /api/tweets/{tweet_id}/like
  * @group tweets - 트윗 관련
- * @returns {object} 204 - No Content
+ * @returns {object} 201 - No Content
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
- * @returns {Error} 10502 - 401 해당 트윗 수정 권한이 없습니다.
+ * @returns {Error} 10504 - 400 이미 좋아요를 누른 트윗입니다.
  */
 export const likeTweet: RequestHandler = async (req, res, next) => {
   try {
-    // TODO
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const newTweetLikeId = TweetLib.getTweetLikeId(user_id, tweet_id);
+    const existingTweetLike = await tweetLikeDatabase.get(newTweetLikeId);
+
+    if (existingTweetLike) {
+      throw new Error('TWEETS_LIKE_ALREADY_EXIST');
+    }
+
+    const newTweetLike = {
+      user_id,
+      tweet_id,
+      like_at: Date(),
+    };
+
+    await tweetLikeDatabase.add(newTweetLikeId, newTweetLike);
+    res.status(201).send();
   } catch (error) {
     next(error);
   }
 };
 
 /**
- * (TODO) 트윗 좋아요 취소
+ * 트윗 좋아요 취소
  * @route DELETE /api/tweets/{tweet_id}/like
  * @group tweets - 트윗 관련
  * @returns {object} 204 - No Content
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
- * @returns {Error} 10502 - 401 해당 트윗 수정 권한이 없습니다.
+ * @returns {Error} 10505 - 400 좋아요 취소를 할 수 없는 트윗입니다.
  */
 export const dislikeTweet: RequestHandler = async (req, res, next) => {
   try {
-    // TODO
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const targetTweetLikeId = TweetLib.getTweetLikeId(user_id, tweet_id);
+    const targetTweetLike = await tweetLikeDatabase.get(targetTweetLikeId);
+
+    if (!targetTweetLike) {
+      throw new Error('TWEETS_LIKE_NO_EXIST');
+    }
+
+    await tweetLikeDatabase.remove(targetTweetLikeId);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

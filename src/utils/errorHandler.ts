@@ -57,6 +57,16 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10503,
     msg: '트윗 변경 사항이 없습니다.',
   },
+  TWEETS_LIKE_ALREADY_EXIST: {
+    statusCode: 400,
+    errorCode: 10504,
+    msg: '이미 좋아요를 누른 트윗입니다.',
+  },
+  TWEETS_LIKE_NO_EXIST: {
+    statusCode: 400,
+    errorCode: 10505,
+    msg: '좋아요 취소를 할 수 없는 트윗입니다.',
+  },
 };
 
 const defaultErrorType = 'INTERNAL_SERVER_ERROR';
