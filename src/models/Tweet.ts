@@ -10,6 +10,7 @@
  * @property {number} retweet_count.required
  * @property {number} like_count.required
  * @property {boolean} like_flag.required
+ * @property {string} reply_id - reply일 경우 원래 tweet의 id
  */
 
 export interface Tweet {
@@ -26,6 +27,8 @@ export interface Tweet {
   like_count: number;
 
   like_flag: boolean;
+
+  reply_id?: string;
 }
 
 export interface TweetModel {
@@ -40,4 +43,6 @@ export interface TweetModel {
   reply_count: number;
   retweet_count: number;
   like_count: number;
+
+  reply_id?: string;
 }
