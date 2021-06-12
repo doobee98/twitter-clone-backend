@@ -31,6 +31,13 @@ class FireStore<T extends DocumentData> {
     this.collection.doc(id).delete();
   }
 
+  async has(id: string): Promise<boolean> {
+    return this.collection
+      .doc(id)
+      .get()
+      .then((doc) => doc.exists);
+  }
+
   async get(id: string): Promise<T | undefined> {
     return this.collection
       .doc(id)
@@ -44,6 +51,12 @@ class FireStore<T extends DocumentData> {
       .then((querySnapshot) =>
         querySnapshot.docs.map((doc) => doc.data() as T),
       );
+  }
+
+  async queryAllId(filterFunc: CollectionFilterFunc<T>): Promise<string[]> {
+    return filterFunc(this.collection as CollectionReference<T>)
+      .get()
+      .then((querySnapshot) => querySnapshot.docs.map((doc) => doc.id));
   }
 }
 
