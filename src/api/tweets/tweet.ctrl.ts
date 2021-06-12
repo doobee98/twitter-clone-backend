@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import Tweet from 'models/Tweet';
+import { Tweet } from 'models/Tweet';
 import { tweetDatabase, tweetLikeDatabase } from '../firebase';
 import { arrayEquals } from '../../utils';
 import * as TweetLib from './tweet.lib';
