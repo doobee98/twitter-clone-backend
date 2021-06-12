@@ -184,18 +184,52 @@ export const createRetweet: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * (TODO) 특정 트윗 댓글로 새로운 트윗 작성
+ * 특정 트윗 댓글로 새로운 트윗 작성
  * @route POST /api/tweets/{tweet_id}/reply
  * @group tweets - 트윗 관련
  * @param {tweetCreateEntry.model} tweetCreateEntry.body - 새로운 트윗 입력
  * @returns {Tweet.model} 201 - 생성된 트윗 정보
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
- * @returns {Error} 10502 - 401 해당 트윗 수정 권한이 없습니다.
  */
 export const createReply: RequestHandler = async (req, res, next) => {
   try {
-    // TODO
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: writer_id } = res.locals.user;
+    const { tweet_id: reply_id } = req.params;
+    const { content, image_src_list } = req.body;
+
+    const hasTweet = await tweetDatabase.has(reply_id);
+
+    if (!hasTweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const replyId = await tweetDatabase.generateAutoId();
+
+    const replyTweetModel: TweetModel = {
+      type: 'reply',
+      tweet_id: replyId,
+      tweeted_at: Date(),
+      writer_id,
+      content,
+      image_src_list,
+      reply_count: 0,
+      retweet_count: 0,
+      like_count: 0,
+      reply_id,
+    };
+    await tweetDatabase.add(replyId, replyTweetModel);
+
+    const replyTweet: Tweet = {
+      ...replyTweetModel,
+      like_flag: false,
+    };
+
+    res.status(201).send(replyTweet);
   } catch (error) {
     next(error);
   }
