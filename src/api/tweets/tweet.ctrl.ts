@@ -161,6 +161,14 @@ export const deleteTweet: RequestHandler = async (req, res, next) => {
     }
 
     await tweetDatabase.remove(tweet_id);
+
+    // TweetLike Database에서도 관련 내용 삭제
+    const tweetLikeIds = await tweetLikeDatabase.queryAllId((collection) =>
+      collection.where('tweet_id', '==', tweet_id),
+    );
+
+    Promise.all(tweetLikeIds.map((id) => tweetLikeDatabase.remove(id)));
+
     res.status(204).send();
   } catch (error) {
     next(error);
