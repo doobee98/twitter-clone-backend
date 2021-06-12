@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { userDatabase } from '../firebase';
 import * as jwt from 'jsonwebtoken';
-import User from 'models/User';
+import { User } from 'models/User';
 import config from '../../config';
 
 interface JwtCertificate {

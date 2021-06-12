@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import User from 'models/User';
+import { User } from 'models/User';
 import { createHash } from '../../utils';
 import { userDatabase } from '../firebase';
 import * as AuthLib from './auth.lib';
