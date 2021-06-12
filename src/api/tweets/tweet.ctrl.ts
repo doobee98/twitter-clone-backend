@@ -1,8 +1,9 @@
 import { RequestHandler } from 'express';
-import { Tweet } from 'models/Tweet';
+import { Tweet, TweetModel } from 'models/Tweet';
 import { tweetDatabase, tweetLikeDatabase } from '../firebase';
 import { arrayEquals } from '../../utils';
 import * as TweetLib from './tweet.lib';
+import { TweetLikeModel } from 'models/TweetLike';
 
 /**
  * 새로운 트윗 작성
@@ -22,7 +23,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
     const { content, image_src_list } = req.body;
     const tweet_id = await tweetDatabase.generateAutoId();
 
-    const newTweet: Tweet = {
+    const newTweetModel: TweetModel = {
       type: 'tweet',
       tweet_id,
       tweeted_at: Date(),
@@ -33,7 +34,12 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
       retweet_count: 0,
       like_count: 0,
     };
-    await tweetDatabase.add(tweet_id, newTweet);
+    await tweetDatabase.add(tweet_id, newTweetModel);
+
+    const newTweet: Tweet = {
+      ...newTweetModel,
+      like_flag: false,
+    };
 
     res.status(201).send(newTweet);
   } catch (error) {
@@ -51,11 +57,17 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
 export const getTweet: RequestHandler = async (req, res, next) => {
   try {
     const { tweet_id } = req.params;
-    const tweet = await tweetDatabase.get(tweet_id);
+    const tweetModel = await tweetDatabase.get(tweet_id);
 
-    if (!tweet) {
+    if (!tweetModel) {
       throw new Error('TWEETS_NOT_EXIST');
     }
+
+    // TODO: like_flag
+    const tweet: Tweet = {
+      ...tweetModel,
+      like_flag: false,
+    };
 
     res.status(200).send(tweet);
   } catch (error) {
@@ -83,13 +95,13 @@ export const editTweet: RequestHandler = async (req, res, next) => {
     const { user_id: writer_id } = res.locals.user;
     const { content, image_src_list } = req.body;
     const { tweet_id } = req.params;
-    const tweet = await tweetDatabase.get(tweet_id);
+    const tweetModel = await tweetDatabase.get(tweet_id);
 
-    if (!tweet) {
+    if (!tweetModel) {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    if (tweet.writer_id !== writer_id) {
+    if (tweetModel.writer_id !== writer_id) {
       throw new Error('TWEETS_NO_EDIT_PERMISSION');
     }
 
@@ -98,14 +110,22 @@ export const editTweet: RequestHandler = async (req, res, next) => {
     }
 
     if (
-      content === tweet.content ||
-      arrayEquals(image_src_list, tweet.image_src_list ?? [])
+      content === tweetModel.content ||
+      arrayEquals(image_src_list, tweetModel.image_src_list ?? [])
     ) {
       throw new Error('TWEETS_NO_EDIT_CONTENT');
     }
 
     await tweetDatabase.update(tweet_id, { content, image_src_list });
-    const newTweet = await tweetDatabase.get(tweet_id);
+
+    const tweetLikeId = TweetLib.getTweetLikeId(writer_id, tweet_id);
+    const hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
+    const newTweet: Tweet = {
+      ...tweetModel,
+      content,
+      image_src_list,
+      like_flag: hasTweetLike,
+    };
 
     res.status(201).send(newTweet);
   } catch (error) {
@@ -205,19 +225,19 @@ export const likeTweet: RequestHandler = async (req, res, next) => {
     }
 
     const newTweetLikeId = TweetLib.getTweetLikeId(user_id, tweet_id);
-    const existingTweetLike = await tweetLikeDatabase.get(newTweetLikeId);
+    const hasTweetLike = await tweetLikeDatabase.has(newTweetLikeId);
 
-    if (existingTweetLike) {
+    if (hasTweetLike) {
       throw new Error('TWEETS_LIKE_ALREADY_EXIST');
     }
 
-    const newTweetLike = {
+    const newTweetLikeModel: TweetLikeModel = {
       user_id,
       tweet_id,
       like_at: Date(),
     };
 
-    await tweetLikeDatabase.add(newTweetLikeId, newTweetLike);
+    await tweetLikeDatabase.add(newTweetLikeId, newTweetLikeModel);
     res.status(201).send();
   } catch (error) {
     next(error);
@@ -247,14 +267,14 @@ export const dislikeTweet: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    const targetTweetLikeId = TweetLib.getTweetLikeId(user_id, tweet_id);
-    const targetTweetLike = await tweetLikeDatabase.get(targetTweetLikeId);
+    const tweetLikeId = TweetLib.getTweetLikeId(user_id, tweet_id);
+    const hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
 
-    if (!targetTweetLike) {
+    if (!hasTweetLike) {
       throw new Error('TWEETS_LIKE_NO_EXIST');
     }
 
-    await tweetLikeDatabase.remove(targetTweetLikeId);
+    await tweetLikeDatabase.remove(tweetLikeId);
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -280,11 +300,30 @@ export const getTweetsFeed: RequestHandler = async (req, res, next) => {
     const { offset, count } = req.body;
 
     // TODO: 개선필요: 정확하게 count만큼만 가져오는 방법?
-    const tweets = await tweetDatabase.queryAll((collection) =>
+    let tweetModels = await tweetDatabase.queryAll((collection) =>
       collection.orderBy('tweeted_at', 'desc').limit(offset - 1 + count),
     );
+    tweetModels = tweetModels.slice(offset - 1);
 
-    res.status(200).send(tweets.slice(offset - 1));
+    const tweets: Tweet[] = await Promise.all(
+      tweetModels.map(async (tweetModel) => {
+        let hasTweetLike = false;
+
+        if (res.locals.user) {
+          const userId = res.locals.user.user_id;
+          const tweetId = tweetModel.tweet_id;
+          const tweetLikeId = TweetLib.getTweetLikeId(userId, tweetId);
+          hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
+        }
+
+        return {
+          ...tweetModel,
+          like_flag: hasTweetLike,
+        };
+      }),
+    );
+
+    res.status(200).send(tweets);
   } catch (error) {
     next(error);
   }

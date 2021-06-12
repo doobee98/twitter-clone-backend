@@ -9,6 +9,7 @@
  * @property {number} reply_count.required
  * @property {number} retweet_count.required
  * @property {number} like_count.required
+ * @property {boolean} like_flag.required
  */
 
 export interface Tweet {
@@ -23,6 +24,8 @@ export interface Tweet {
   reply_count: number;
   retweet_count: number;
   like_count: number;
+
+  like_flag: boolean;
 }
 
 export interface TweetModel {
