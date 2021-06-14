@@ -67,6 +67,11 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10505,
     msg: '좋아요 취소를 할 수 없는 트윗입니다.',
   },
+  USERS_INVALID_USER_ID: {
+    statusCode: 404,
+    errorCode: 10505,
+    msg: '존재하지 않는 아이디입니다.',
+  },
 };
 
 const defaultErrorType = 'INTERNAL_SERVER_ERROR';
