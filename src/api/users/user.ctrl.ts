@@ -9,7 +9,7 @@ import {
   userFollowDatabase,
 } from '../firebase';
 import { UserFollowModel } from 'models/UserFollow';
-import { Tweet } from 'models/Tweet';
+import { Tweet, TweetList, TweetModel } from 'models/Tweet';
 
 /**
  * 유저 정보 가져오기
@@ -52,7 +52,7 @@ export const getUser: RequestHandler = async (req, res, next) => {
  * @route POST /api/users/{user_id}/feed
  * @group users - 유저 관련
  * @param {tweetFeedEntry.model} tweetFeedEntry.body - 트윗 피드 리스트 조건
- * @returns {Array.<Tweet>} 200 - 트윗 리스트
+ * @returns {TweetList} 200 - totalCount가 포함된 트윗 리스트
  */
 export const getUserFeed: RequestHandler = async (req, res, next) => {
   try {
@@ -64,14 +64,20 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    // TODO: 개선필요: 정확하게 count만큼만 가져오는 방법?
-    let tweetModels = await tweetDatabase.queryAll((collection) =>
+    const tweetIds = await tweetDatabase.queryAllId((collection) =>
       collection
         .where('writer_id', '==', user_id)
-        .orderBy('tweeted_at', 'desc')
-        .limit(offset - 1 + count),
+        .orderBy('tweeted_at', 'desc'),
     );
-    tweetModels = tweetModels.slice(offset - 1);
+
+    const totalCount = tweetIds.length;
+    const tweetModels = (
+      await Promise.all(
+        tweetIds
+          .slice(offset - 1, offset - 1 + count)
+          .map((id) => tweetDatabase.get(id)),
+      )
+    ).filter((t): t is TweetModel => t !== undefined);
 
     // TODO: tweet 가져올때마다 이짓하는거 엄청 불편하다.
     const tweets: Tweet[] = await Promise.all(
@@ -93,7 +99,12 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
       }),
     );
 
-    res.status(200).send(tweets);
+    const response: TweetList = {
+      totalCount,
+      data: tweets,
+    };
+
+    res.status(200).send(response);
   } catch (error) {
     next(error);
   }

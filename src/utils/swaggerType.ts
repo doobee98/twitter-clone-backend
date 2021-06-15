@@ -40,6 +40,6 @@
 /**
  * 트윗 피드 리스트 파라미터
  * @typedef tweetFeedEntry
- * @property {number} offset.required - 시작점, 100이면 100번째 데이터부터 시작
+ * @property {number} offset.required - 시작점, 0이 아니라 1부터 시작합니다. 100이면 100번째 데이터부터 시작
  * @property {number} count.required - 시작점부터 가져오는 개수, 5이면 100부터 104까지 가져옴
  */
