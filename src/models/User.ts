@@ -22,8 +22,6 @@ export interface User {
   bio?: string;
   website?: string;
   location?: string;
-
-  hashed_password?: string;
 }
 
 export interface UserModel {

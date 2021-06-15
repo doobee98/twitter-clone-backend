@@ -27,11 +27,9 @@ export const getUser: RequestHandler = async (req, res, next) => {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    const user: User = {
-      ...userModel,
-      hashed_password: undefined,
-    };
+    delete userModel.hashed_password;
 
+    const user: User = { ...userModel };
     res.status(200).send(user);
   } catch (error) {
     next(error);

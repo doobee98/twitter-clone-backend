@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { User } from 'models/User';
+import { User, UserModel } from 'models/User';
 import { createHash } from '../../utils';
 import {
   tweetLikeDatabase,
@@ -122,7 +122,7 @@ export const signup: RequestHandler = async (req, res, next) => {
     const hashedInputPassword = await createHash(password);
     const currentDate = Date();
 
-    const newUser: User = {
+    const newUserModel: UserModel = {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
@@ -131,8 +131,8 @@ export const signup: RequestHandler = async (req, res, next) => {
       joined_at: currentDate,
     };
 
-    await userDatabase.add(newId, newUser);
-    res.status(201).send(newUser);
+    await userDatabase.add(newId, newUserModel);
+    res.status(201).send(newUserModel);
   } catch (error) {
     next(error);
   }
