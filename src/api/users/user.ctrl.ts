@@ -1,8 +1,15 @@
 import { RequestHandler } from 'express';
 import { User, UserModel } from 'models/User';
 import * as UserLib from './user.lib';
-import { userDatabase, userFollowDatabase } from '../firebase';
+import * as TweetLib from '../tweets/tweet.lib';
+import {
+  tweetDatabase,
+  tweetLikeDatabase,
+  userDatabase,
+  userFollowDatabase,
+} from '../firebase';
 import { UserFollowModel } from 'models/UserFollow';
+import { Tweet } from 'models/Tweet';
 
 /**
  * 유저 정보 가져오기
@@ -26,6 +33,58 @@ export const getUser: RequestHandler = async (req, res, next) => {
     };
 
     res.status(200).send(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 특정 유저의 트윗 피드 가져오기 - 페이지네이션
+ * @route POST /api/users/{user_id}/feed
+ * @group users - 유저 관련
+ * @param {tweetFeedEntry.model} tweetFeedEntry.body - 트윗 피드 리스트 조건
+ * @returns {Array.<Tweet>} 200 - 트윗 리스트
+ */
+export const getUserFeed: RequestHandler = async (req, res, next) => {
+  try {
+    const { offset, count } = req.body;
+    const { user_id } = req.params;
+    const userModel = await userDatabase.get(user_id);
+
+    if (!userModel) {
+      throw new Error('USERS_INVALID_USER_ID');
+    }
+
+    // TODO: 개선필요: 정확하게 count만큼만 가져오는 방법?
+    let tweetModels = await tweetDatabase.queryAll((collection) =>
+      collection
+        .where('writer_id', '==', user_id)
+        .orderBy('tweeted_at', 'desc')
+        .limit(offset - 1 + count),
+    );
+    tweetModels = tweetModels.slice(offset - 1);
+
+    // TODO: tweet 가져올때마다 이짓하는거 엄청 불편하다.
+    const tweets: Tweet[] = await Promise.all(
+      tweetModels.map(async (tweetModel) => {
+        let hasTweetLike = false;
+
+        // TODO: userId 이름 변경 필요
+        if (res.locals.user) {
+          const userId = res.locals.user.user_id;
+          const tweetId = tweetModel.tweet_id;
+          const tweetLikeId = TweetLib.getTweetLikeId(userId, tweetId);
+          hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
+        }
+
+        return {
+          ...tweetModel,
+          like_flag: hasTweetLike,
+        };
+      }),
+    );
+
+    res.status(200).send(tweets);
   } catch (error) {
     next(error);
   }
