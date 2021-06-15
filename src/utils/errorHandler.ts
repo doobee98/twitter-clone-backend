@@ -82,6 +82,11 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10603,
     msg: '팔로잉 취소를 할 수 없습니다.',
   },
+  USERS_UNABLE_FOLLOW_SELF: {
+    statusCode: 400,
+    errorCode: 10604,
+    msg: '자기 자신을 팔로우할 수 없습니다.',
+  },
 };
 
 const defaultErrorType = 'INTERNAL_SERVER_ERROR';

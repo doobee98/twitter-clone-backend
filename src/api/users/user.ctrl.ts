@@ -105,6 +105,7 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
  * @group users - 유저 관련
  * @returns {object} 201 - No Content
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10604 - 400 자기 자신을 팔로우할 수 없습니다.
  * @returns {Error} 10601 - 404 존재하지 않는 아이디입니다.
  * @returns {Error} 10602 - 400 이미 팔로잉 중입니다.
  */
@@ -116,6 +117,11 @@ export const followUser: RequestHandler = async (req, res, next) => {
 
     const { user_id } = res.locals.user;
     const { user_id: follow_user_id } = req.params;
+
+    if (user_id === follow_user_id) {
+      throw new Error('USERS_UNABLE_FOLLOW_SELF');
+    }
+
     const hasFollowUser = await userDatabase.has(follow_user_id);
 
     if (!hasFollowUser) {
