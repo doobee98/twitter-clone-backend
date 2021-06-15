@@ -69,8 +69,18 @@ const errorDictionary: Record<string, ErrorResponse> = {
   },
   USERS_INVALID_USER_ID: {
     statusCode: 404,
-    errorCode: 10505,
+    errorCode: 10601,
     msg: '존재하지 않는 아이디입니다.',
+  },
+  USERS_FOLLOW_ALREADY_EXIST: {
+    statusCode: 400,
+    errorCode: 10602,
+    msg: '이미 팔로잉 중입니다.',
+  },
+  USERS_FOLLOW_NO_EXIST: {
+    statusCode: 400,
+    errorCode: 10603,
+    msg: '팔로잉 취소를 할 수 없습니다.',
   },
 };
 

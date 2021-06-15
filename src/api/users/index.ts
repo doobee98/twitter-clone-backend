@@ -5,4 +5,7 @@ const router = Router();
 
 router.get('/:user_id', userCtrl.getUser);
 
+router.post('/:user_id/follow', userCtrl.followUser);
+router.delete('/:user_id/follow', userCtrl.unfollowUser);
+
 export default router;
