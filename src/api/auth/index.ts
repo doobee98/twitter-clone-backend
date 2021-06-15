@@ -10,5 +10,6 @@ router.get('/logout', authCtrl.logout);
 router.get('/info', authCtrl.info);
 
 router.post('/signup', authCtrl.signup);
+router.delete('/signout', authCtrl.signout);
 
 export default router;
