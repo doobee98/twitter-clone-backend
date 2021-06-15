@@ -9,6 +9,7 @@
  * @property {string} bio - 자기소개
  * @property {string} website
  * @property {string} location
+ * @property {boolean} following_flag
  */
 
 export interface User {
@@ -22,6 +23,8 @@ export interface User {
   bio?: string;
   website?: string;
   location?: string;
+
+  following_flag?: boolean;
 }
 
 export interface UserModel {

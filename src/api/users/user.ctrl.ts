@@ -29,7 +29,18 @@ export const getUser: RequestHandler = async (req, res, next) => {
 
     delete userModel.hashed_password;
 
-    const user: User = { ...userModel };
+    let following_flag = undefined;
+    if (res.locals.user) {
+      // TODO: 네이밍 변경 필요
+      const myId = res.locals.user.user_id;
+      const userFollowId = UserLib.getUserFollowId(myId, user_id);
+      following_flag = await userFollowDatabase.has(userFollowId);
+    }
+
+    const user: User = {
+      ...userModel,
+      following_flag,
+    };
     res.status(200).send(user);
   } catch (error) {
     next(error);
