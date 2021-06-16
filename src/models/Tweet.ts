@@ -46,3 +46,14 @@ export interface TweetModel {
 
   reply_id?: string;
 }
+
+/**
+ * @typedef TweetList
+ * @property {number} totalCount.required
+ * @property {Array.<Tweet>} tweets.required
+ */
+
+export interface TweetList {
+  totalCount: number;
+  data: Tweet[];
+}

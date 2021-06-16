@@ -1,7 +1,11 @@
 import { RequestHandler } from 'express';
-import { User } from 'models/User';
+import { User, UserModel } from 'models/User';
 import { createHash } from '../../utils';
-import { userDatabase } from '../firebase';
+import {
+  tweetLikeDatabase,
+  userDatabase,
+  userFollowDatabase,
+} from '../firebase';
 import * as AuthLib from './auth.lib';
 
 // TODO: 테스트용 endpoint
@@ -118,7 +122,7 @@ export const signup: RequestHandler = async (req, res, next) => {
     const hashedInputPassword = await createHash(password);
     const currentDate = Date();
 
-    const newUser: User = {
+    const newUserModel: UserModel = {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
@@ -127,8 +131,47 @@ export const signup: RequestHandler = async (req, res, next) => {
       joined_at: currentDate,
     };
 
-    await userDatabase.add(newId, newUser);
-    res.status(201).send(newUser);
+    await userDatabase.add(newId, newUserModel);
+    res.status(201).send(newUserModel);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 회원탈퇴
+ * @route DELETE /api/auth/signout
+ * @group auth - 계정 관련
+ * @returns {object} 204 - No Content
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ */
+export const signout: RequestHandler = async (req, res, next) => {
+  try {
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id } = res.locals.user;
+
+    await userDatabase.remove(user_id);
+
+    // TweetLike Database에서도 관련 내용 삭제
+    const tweetLikeIds = await tweetLikeDatabase.queryAllId((collection) =>
+      collection.where('user_id', '==', user_id),
+    );
+
+    Promise.all(tweetLikeIds.map((id) => tweetLikeDatabase.remove(id)));
+
+    // UserFollow Database에서도 관련 내용 삭제
+    const userFollowIds1 = await userFollowDatabase.queryAllId((collection) =>
+      collection.where('following_user_id', '==', user_id),
+    );
+    const userFollowIds2 = await userFollowDatabase.queryAllId((collection) =>
+      collection.where('followed_user_id', '==', user_id),
+    );
+    const userFollowIds = [...userFollowIds1, ...userFollowIds2];
+
+    Promise.all(userFollowIds.map((id) => userFollowDatabase.remove(id)));
   } catch (error) {
     next(error);
   }

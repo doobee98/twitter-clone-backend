@@ -6,6 +6,7 @@ import FireStore from '../models/FireStore';
 import { UserModel } from '../models/User';
 import { TweetModel } from '../models/Tweet';
 import { TweetLikeModel } from '../models/TweetLike';
+import { UserFollowModel } from '../models/UserFollow';
 
 firebase.initializeApp({ ...config.firebase });
 
@@ -22,4 +23,8 @@ export const tweetDatabase = new FireStore<TweetModel>(
 
 export const tweetLikeDatabase = new FireStore<TweetLikeModel>(
   firestoreService.collection('tweet-like'),
+);
+
+export const userFollowDatabase = new FireStore<UserFollowModel>(
+  firestoreService.collection('user-follow'),
 );
