@@ -44,6 +44,7 @@ export const getUser: RequestHandler = async (req, res, next) => {
  */
 export const getUserFeed: RequestHandler = async (req, res, next) => {
   try {
+    const currentUserId = res.locals.user?.user_id;
     const { offset, count } = req.body;
     const { user_id } = req.params;
     const userModel = await userDatabase.get(user_id);
@@ -67,23 +68,9 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
       )
     ).filter((t): t is TweetModel => t !== undefined);
 
-    // TODO: tweet 가져올때마다 이짓하는거 엄청 불편하다.
     const tweets: Tweet[] = await Promise.all(
       tweetModels.map(async (tweetModel) => {
-        let hasTweetLike = false;
-
-        // TODO: userId 이름 변경 필요
-        if (res.locals.user) {
-          const userId = res.locals.user.user_id;
-          const tweetId = tweetModel.tweet_id;
-          const tweetLikeId = TweetLib.getTweetLikeId(userId, tweetId);
-          hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
-        }
-
-        return {
-          ...tweetModel,
-          like_flag: hasTweetLike,
-        };
+        return await TweetLib.getTweetFromModel(tweetModel, { currentUserId });
       }),
     );
 
