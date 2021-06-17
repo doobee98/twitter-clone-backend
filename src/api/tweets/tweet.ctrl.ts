@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { Tweet, TweetModel } from 'models/Tweet';
-import { tweetDatabase, tweetLikeDatabase } from '../firebase';
+import { tweetDatabase, tweetLikeDatabase, userDatabase } from '../firebase';
 import { arrayEquals } from '../../utils';
 import * as TweetLib from './tweet.lib';
 import { TweetLikeModel } from 'models/TweetLike';
@@ -21,6 +21,13 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
 
     const { user_id: writer_id } = res.locals.user;
     const { content, image_src_list } = req.body;
+
+    const writer = await userDatabase.get(writer_id);
+    if (!writer) {
+      // TODO: 여기에서 ERROR를 내보내는게 좀 이상하다.
+      throw new Error('USERS_INVALID_USER_ID');
+    }
+
     const tweet_id = await tweetDatabase.generateAutoId();
 
     const newTweetModel: TweetModel = {
@@ -35,6 +42,8 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
 
     const newTweet: Tweet = {
       ...newTweetModel,
+      writer_name: writer.username,
+      writer_profile_img_src: writer.profile_img_src,
       reply_count: 0,
       retweet_count: 0,
       like_count: 0,

@@ -4,6 +4,8 @@
  * @property {string} tweet_id.required
  * @property {string} tweeted_at.required
  * @property {string} writer_id.required
+ * @property {string} writer_name.required
+ * @property {string} writer_profile_img_src
  * @property {string} content.required
  * @property {Array.<string>} image_src_list
  * @property {number} reply_count.required
@@ -18,6 +20,8 @@ export interface Tweet {
   tweet_id: string;
   tweeted_at: string;
   writer_id: string;
+  writer_name: string;
+  writer_profile_img_src?: string;
 
   content: string;
   image_src_list?: string[];
