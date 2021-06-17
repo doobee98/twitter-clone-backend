@@ -30,14 +30,14 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
       writer_id,
       content,
       image_src_list,
-      reply_count: 0,
-      retweet_count: 0,
-      like_count: 0,
     };
     await tweetDatabase.add(tweet_id, newTweetModel);
 
     const newTweet: Tweet = {
       ...newTweetModel,
+      reply_count: 0,
+      retweet_count: 0,
+      like_count: 0,
       like_flag: false,
     };
 
@@ -56,6 +56,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
  */
 export const getTweet: RequestHandler = async (req, res, next) => {
   try {
+    const currentUserId = res.locals.user?.user_id;
     const { tweet_id } = req.params;
     const tweetModel = await tweetDatabase.get(tweet_id);
 
@@ -63,11 +64,9 @@ export const getTweet: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    // TODO: like_flag
-    const tweet: Tweet = {
-      ...tweetModel,
-      like_flag: false,
-    };
+    const tweet = await TweetLib.getTweetFromModel(tweetModel, {
+      currentUserId,
+    });
 
     res.status(200).send(tweet);
   } catch (error) {
@@ -92,6 +91,7 @@ export const editTweet: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_NOT_LOGINED');
     }
 
+    const currentUserId = res.locals.user?.user_id;
     const { user_id: writer_id } = res.locals.user;
     const { content, image_src_list } = req.body;
     const { tweet_id } = req.params;
@@ -118,16 +118,9 @@ export const editTweet: RequestHandler = async (req, res, next) => {
 
     await tweetDatabase.update(tweet_id, { content, image_src_list });
 
-    const tweetLikeId = TweetLib.getTweetLikeId(writer_id, tweet_id);
-    const hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
-    const newTweet: Tweet = {
-      ...tweetModel,
-      content,
-      image_src_list,
-      like_flag: hasTweetLike,
-    };
+    const tweet = TweetLib.getTweetFromModel(tweetModel, { currentUserId });
 
-    res.status(201).send(newTweet);
+    res.status(201).send(tweet);
   } catch (error) {
     next(error);
   }
@@ -206,7 +199,7 @@ export const createReply: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_NOT_LOGINED');
     }
 
-    const { user_id: writer_id } = res.locals.user;
+    const currentUserId = res.locals.user?.user_id;
     const { tweet_id: reply_id } = req.params;
     const { content, image_src_list } = req.body;
 
@@ -222,20 +215,19 @@ export const createReply: RequestHandler = async (req, res, next) => {
       type: 'reply',
       tweet_id: replyId,
       tweeted_at: Date(),
-      writer_id,
+      writer_id: currentUserId,
       content,
       image_src_list,
-      reply_count: 0,
-      retweet_count: 0,
-      like_count: 0,
       reply_id,
     };
     await tweetDatabase.add(replyId, replyTweetModel);
 
-    const replyTweet: Tweet = {
-      ...replyTweetModel,
-      like_flag: false,
-    };
+    const replyTweet: Tweet = await TweetLib.getTweetFromModel(
+      replyTweetModel,
+      {
+        currentUserId,
+      },
+    );
 
     res.status(201).send(replyTweet);
   } catch (error) {
@@ -339,6 +331,7 @@ export const getTweetsFeed: RequestHandler = async (req, res, next) => {
       3. 쿼리 제대로된 정의 필요. 지금은 쿼리 따로 없음
       4. 정렬도 시간 역순으로 하는게 맞는지 고민해보기
     */
+    const currentUserId = res.locals.user?.user_id;
     const { offset, count } = req.body;
 
     // TODO: 개선필요: 정확하게 count만큼만 가져오는 방법?
@@ -349,19 +342,7 @@ export const getTweetsFeed: RequestHandler = async (req, res, next) => {
 
     const tweets: Tweet[] = await Promise.all(
       tweetModels.map(async (tweetModel) => {
-        let hasTweetLike = false;
-
-        if (res.locals.user) {
-          const userId = res.locals.user.user_id;
-          const tweetId = tweetModel.tweet_id;
-          const tweetLikeId = TweetLib.getTweetLikeId(userId, tweetId);
-          hasTweetLike = await tweetLikeDatabase.has(tweetLikeId);
-        }
-
-        return {
-          ...tweetModel,
-          like_flag: hasTweetLike,
-        };
+        return await TweetLib.getTweetFromModel(tweetModel, { currentUserId });
       }),
     );
 

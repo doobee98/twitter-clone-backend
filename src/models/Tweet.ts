@@ -40,10 +40,6 @@ export interface TweetModel {
   content: string;
   image_src_list?: string[];
 
-  reply_count: number;
-  retweet_count: number;
-  like_count: number;
-
   reply_id?: string;
 }
 
