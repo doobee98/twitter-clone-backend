@@ -1,4 +1,8 @@
-import { tweetDatabase, tweetLikeDatabase } from '../../api/firebase';
+import {
+  tweetDatabase,
+  tweetLikeDatabase,
+  userDatabase,
+} from '../../api/firebase';
 import { Tweet, TweetModel } from 'models/Tweet';
 
 export const getTweetLikeId = (userId: string, tweetId: string) => {
@@ -14,6 +18,12 @@ export const getTweetFromModel = async (
   params: getTweetFromModelParams,
 ): Promise<Tweet> => {
   const { currentUserId } = params;
+
+  const writer = await userDatabase.get(tweetModel.writer_id);
+  if (!writer) {
+    // TODO: 여기에서 ERROR를 내보내는게 좀 이상하다.
+    throw new Error('USERS_INVALID_USER_ID');
+  }
 
   let replyCount = 0;
   if (tweetModel.reply_id) {
@@ -39,6 +49,8 @@ export const getTweetFromModel = async (
 
   const tweet: Tweet = {
     ...tweetModel,
+    writer_name: writer.username,
+    writer_profile_img_src: writer.profile_img_src,
     reply_count: replyCount,
     retweet_count: retweetCount,
     like_count: likeCount,
