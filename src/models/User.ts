@@ -30,8 +30,6 @@ export interface User {
 export interface UserModel {
   user_id: string;
   username: string;
-  following_count: number;
-  follower_count: number;
   joined_at: string;
 
   profile_img_src?: string;

@@ -20,6 +20,7 @@ import { Tweet, TweetList, TweetModel } from 'models/Tweet';
  */
 export const getUser: RequestHandler = async (req, res, next) => {
   try {
+    const currentUserId = res.locals.user?.user_id;
     const { user_id } = req.params;
     const userModel = await userDatabase.get(user_id);
 
@@ -27,20 +28,7 @@ export const getUser: RequestHandler = async (req, res, next) => {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    delete userModel.hashed_password;
-
-    let following_flag = undefined;
-    if (res.locals.user) {
-      // TODO: 네이밍 변경 필요
-      const myId = res.locals.user.user_id;
-      const userFollowId = UserLib.getUserFollowId(myId, user_id);
-      following_flag = await userFollowDatabase.has(userFollowId);
-    }
-
-    const user: User = {
-      ...userModel,
-      following_flag,
-    };
+    const user = await UserLib.getUserFromModel(userModel, { currentUserId });
     res.status(200).send(user);
   } catch (error) {
     next(error);
@@ -126,20 +114,23 @@ export const followUser: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_NOT_LOGINED');
     }
 
-    const { user_id } = res.locals.user;
-    const { user_id: follow_user_id } = req.params;
+    const { user_id: currentUserId } = res.locals.user;
+    const { user_id: followedUserId } = req.params;
 
-    if (user_id === follow_user_id) {
+    if (currentUserId === followedUserId) {
       throw new Error('USERS_UNABLE_FOLLOW_SELF');
     }
 
-    const hasFollowUser = await userDatabase.has(follow_user_id);
+    const followedUser = await userDatabase.get(followedUserId);
 
-    if (!hasFollowUser) {
+    if (!followedUser) {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    const newUserFollowId = UserLib.getUserFollowId(user_id, follow_user_id);
+    const newUserFollowId = UserLib.getUserFollowId(
+      currentUserId,
+      followedUserId,
+    );
     const hasUserFollow = await userFollowDatabase.has(newUserFollowId);
 
     if (hasUserFollow) {
@@ -147,12 +138,12 @@ export const followUser: RequestHandler = async (req, res, next) => {
     }
 
     const newUserFollowModel: UserFollowModel = {
-      following_user_id: user_id,
-      followed_user_id: follow_user_id,
+      following_user_id: currentUserId,
+      followed_user_id: followedUserId,
       following_at: Date(),
     };
-
     await userFollowDatabase.add(newUserFollowId, newUserFollowModel);
+
     res.status(201).send();
   } catch (error) {
     next(error);
@@ -174,22 +165,23 @@ export const unfollowUser: RequestHandler = async (req, res, next) => {
       throw new Error('AUTH_NOT_LOGINED');
     }
 
-    const { user_id } = res.locals.user;
-    const { user_id: follow_user_id } = req.params;
-    const hasFollowUser = await userDatabase.has(follow_user_id);
+    const { user_id: currentUserId } = res.locals.user;
+    const { user_id: followedUserId } = req.params;
 
-    if (!hasFollowUser) {
+    const followedUser = await userDatabase.get(followedUserId);
+
+    if (!followedUser) {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    const userFollowId = UserLib.getUserFollowId(user_id, follow_user_id);
+    const userFollowId = UserLib.getUserFollowId(currentUserId, followedUserId);
     const hasUserFollow = await userFollowDatabase.has(userFollowId);
 
     if (!hasUserFollow) {
       throw new Error('USERS_FOLLOW_NO_EXIST');
     }
-
     await userFollowDatabase.remove(userFollowId);
+
     res.status(204).send();
   } catch (error) {
     next(error);

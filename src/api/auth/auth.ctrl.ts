@@ -7,6 +7,7 @@ import {
   userFollowDatabase,
 } from '../firebase';
 import * as AuthLib from './auth.lib';
+import * as UserLib from '../users/user.lib';
 
 // TODO: 테스트용 endpoint
 export const currentUser: RequestHandler = async (req, res, next) => {
@@ -39,14 +40,17 @@ export const login: RequestHandler = async (req, res, next) => {
     const { id, password } = req.body;
     const hashedInputPassword = await createHash(password);
 
-    const user = await userDatabase.get(id);
-    const isCorrectPassword = user?.hashed_password === hashedInputPassword;
+    const userModel = await userDatabase.get(id);
+    const isCorrectPassword =
+      userModel?.hashed_password === hashedInputPassword;
 
-    if (!user || !isCorrectPassword) {
+    if (!userModel || !isCorrectPassword) {
       throw new Error('AUTH_INCORRECT_USER_ID_OR_PASSWORD');
     }
 
-    user.hashed_password = undefined;
+    const user = await UserLib.getUserFromModel(userModel, {
+      currentUserId: id,
+    });
 
     const token = AuthLib.createToken(user);
     res.set('Authorization', `Bearer ${token}`);
@@ -71,13 +75,15 @@ export const info: RequestHandler = async (req, res, next) => {
     }
 
     const { user_id } = res.locals.user;
-    const user = await userDatabase.get(user_id);
+    const userModel = await userDatabase.get(user_id);
 
-    if (!user) {
+    if (!userModel) {
       throw new Error('AUTH_LOGIN_TOKEN_IS_COMPROMISED');
     }
 
-    user.hashed_password = undefined;
+    const user = await UserLib.getUserFromModel(userModel, {
+      currentUserId: user_id,
+    });
 
     res.status(200).send(user);
   } catch (error) {
@@ -114,7 +120,7 @@ export const signup: RequestHandler = async (req, res, next) => {
 
     const { id: newId, password, username } = req.body;
 
-    const isAlreadyExistUser = (await userDatabase.get(newId)) !== undefined;
+    const isAlreadyExistUser = await userDatabase.has(newId);
     if (isAlreadyExistUser) {
       throw new Error('AUTH_USER_ID_ALREADY_EXIST');
     }
@@ -126,8 +132,6 @@ export const signup: RequestHandler = async (req, res, next) => {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
-      following_count: 0,
-      follower_count: 0,
       joined_at: currentDate,
     };
 

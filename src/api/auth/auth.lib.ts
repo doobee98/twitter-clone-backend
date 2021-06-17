@@ -48,8 +48,8 @@ export const checkAuthToken: RequestHandler = async (req, res, next) => {
       config.jwtSecretKey,
     ) as JwtCertificate;
 
-    const user = await userDatabase.get(user_id);
-    if (!user) {
+    const hasUser = await userDatabase.has(user_id);
+    if (!hasUser) {
       throw new Error('AUTH_LOGIN_TOKEN_IS_COMPROMISED');
     }
 
