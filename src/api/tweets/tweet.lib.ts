@@ -1,21 +1,26 @@
 import {
+  retweetDatabase,
   tweetDatabase,
   tweetLikeDatabase,
   userDatabase,
 } from '../../api/firebase';
-import { Tweet, TweetModel } from 'models/Tweet';
+import { RetweetModel, Tweet, TweetModel } from 'models/Tweet';
 
 export const getTweetLikeId = (userId: string, tweetId: string) => {
   return `${userId}-${tweetId}`;
 };
 
-interface getTweetFromModelParams {
+export const getRetweetId = (userId: string, tweetId: string) => {
+  return `${userId}-${tweetId}`;
+};
+
+interface getTweetFromTweetModelParams {
   currentUserId?: string;
 }
 
-export const getTweetFromModel = async (
+export const getTweetFromTweetModel = async (
   tweetModel: TweetModel,
-  params: getTweetFromModelParams,
+  params: getTweetFromTweetModelParams,
 ): Promise<Tweet> => {
   const { currentUserId } = params;
 
@@ -25,24 +30,28 @@ export const getTweetFromModel = async (
     throw new Error('USERS_INVALID_USER_ID');
   }
 
-  let replyCount = 0;
-  if (tweetModel.reply_id) {
-    const replyTweetIdList = await tweetDatabase.queryAllId((collection) =>
-      collection.where('reply_id', '==', tweetModel.reply_id),
-    );
-    replyCount = replyTweetIdList.length;
-  }
+  const replyTweetIdList = await tweetDatabase.queryAllId((collection) =>
+    collection.where('reply_id', '==', tweetModel.tweet_id),
+  );
+  const replyCount = replyTweetIdList.length;
 
-  // TODO
-  const retweetCount = 0;
+  const retweetIdList = await retweetDatabase.queryAllId((collection) =>
+    collection.where('retweet_tweet_id', '==', tweetModel.tweet_id),
+  );
+  const retweetCount = retweetIdList.length;
 
-  const likeUserIdList = await tweetLikeDatabase.queryAllId((collection) =>
+  const likeIdList = await tweetLikeDatabase.queryAllId((collection) =>
     collection.where('tweet_id', '==', tweetModel.tweet_id),
   );
-  const likeCount = likeUserIdList.length;
+  const likeCount = likeIdList.length;
 
+  let retweetFlag = false;
   let likeFlag = false;
+
   if (currentUserId) {
+    const retweetId = getRetweetId(currentUserId, tweetModel.tweet_id);
+    retweetFlag = await retweetDatabase.has(retweetId);
+
     const tweetLikeId = getTweetLikeId(currentUserId, tweetModel.tweet_id);
     likeFlag = await tweetLikeDatabase.has(tweetLikeId);
   }
@@ -54,8 +63,41 @@ export const getTweetFromModel = async (
     reply_count: replyCount,
     retweet_count: retweetCount,
     like_count: likeCount,
+    retweet_flag: retweetFlag,
     like_flag: likeFlag,
   };
 
   return tweet;
+};
+
+interface getTweetFromRetweetModelParams {
+  currentUserId?: string;
+}
+
+export const getTweetFromRetweetModel = async (
+  retweetModel: RetweetModel,
+  params: getTweetFromRetweetModelParams,
+): Promise<Tweet> => {
+  const { currentUserId } = params;
+
+  const originalTweetModel = await tweetDatabase.get(
+    retweetModel.retweet_tweet_id,
+  );
+  if (!originalTweetModel) {
+    // TODO: 여기에서 ERROR를 내보내는게 좀 이상하다.
+    throw new Error('TWEETS_NOT_EXIST');
+  }
+
+  const originalTweet = await getTweetFromTweetModel(originalTweetModel, {
+    currentUserId,
+  });
+
+  const retweet: Tweet = {
+    ...originalTweet,
+    type: 'retweet',
+    retweet_writer_id: retweetModel.retweet_user_id,
+    retweeted_at: retweetModel.retweeted_at,
+  };
+
+  return retweet;
 };

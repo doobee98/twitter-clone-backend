@@ -11,8 +11,11 @@
  * @property {number} reply_count.required
  * @property {number} retweet_count.required
  * @property {number} like_count.required
- * @property {boolean} like_flag.required
- * @property {string} reply_id - reply일 경우 원래 tweet의 id
+ * @property {boolean} retweet_flag.required - <currentUser>가 이 tweet을 retweet했는지
+ * @property {boolean} like_flag.required - <currentUser>가 이 tweet을 like했는지
+ * @property {string} retweet_writer_id - retweet일 경우, retweet한 사람의 id
+ * @property {string} retweeted_at - retweet일 경우, 언제 retweet한건지
+ * @property {string} reply_id - reply일 경우, 원래 tweet의 id
  */
 
 export interface Tweet {
@@ -30,13 +33,17 @@ export interface Tweet {
   retweet_count: number;
   like_count: number;
 
+  retweet_flag: boolean;
   like_flag: boolean;
+
+  retweet_writer_id?: string;
+  retweeted_at?: string;
 
   reply_id?: string;
 }
 
 export interface TweetModel {
-  type: 'tweet' | 'retweet' | 'reply';
+  type: 'tweet' | 'reply';
   tweet_id: string;
   tweeted_at: string;
   writer_id: string;
@@ -45,6 +52,12 @@ export interface TweetModel {
   image_src_list?: string[];
 
   reply_id?: string;
+}
+
+export interface RetweetModel {
+  retweet_user_id: string;
+  retweet_tweet_id: string;
+  retweeted_at: string;
 }
 
 /**

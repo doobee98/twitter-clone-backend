@@ -1,7 +1,13 @@
 import { RequestHandler } from 'express';
-import { Tweet, TweetModel } from 'models/Tweet';
-import { tweetDatabase, tweetLikeDatabase, userDatabase } from '../firebase';
-import { arrayEquals } from '../../utils';
+import { RetweetModel, Tweet, TweetModel } from 'models/Tweet';
+import {
+  retweetDatabase,
+  tweetDatabase,
+  tweetLikeDatabase,
+  userDatabase,
+  userFollowDatabase,
+} from '../firebase';
+import { arrayEquals, getCurrentDate } from '../../utils';
 import * as TweetLib from './tweet.lib';
 import { TweetLikeModel } from 'models/TweetLike';
 
@@ -33,7 +39,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
     const newTweetModel: TweetModel = {
       type: 'tweet',
       tweet_id,
-      tweeted_at: Date(),
+      tweeted_at: getCurrentDate(),
       writer_id,
       content,
       image_src_list,
@@ -48,6 +54,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
       retweet_count: 0,
       like_count: 0,
       like_flag: false,
+      retweet_flag: false,
     };
 
     res.status(201).send(newTweet);
@@ -73,7 +80,7 @@ export const getTweet: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    const tweet = await TweetLib.getTweetFromModel(tweetModel, {
+    const tweet = await TweetLib.getTweetFromTweetModel(tweetModel, {
       currentUserId,
     });
 
@@ -127,7 +134,9 @@ export const editTweet: RequestHandler = async (req, res, next) => {
 
     await tweetDatabase.update(tweet_id, { content, image_src_list });
 
-    const tweet = TweetLib.getTweetFromModel(tweetModel, { currentUserId });
+    const tweet = TweetLib.getTweetFromTweetModel(tweetModel, {
+      currentUserId,
+    });
 
     res.status(201).send(tweet);
   } catch (error) {
@@ -164,6 +173,13 @@ export const deleteTweet: RequestHandler = async (req, res, next) => {
 
     await tweetDatabase.remove(tweet_id);
 
+    // Retweet Database에서도 관련 내용 삭제
+    const retweetIds = await retweetDatabase.queryAllId((collection) =>
+      collection.where('retweet_tweet_id', '==', tweet_id),
+    );
+
+    Promise.all(retweetIds.map((id) => retweetDatabase.remove(id)));
+
     // TweetLike Database에서도 관련 내용 삭제
     const tweetLikeIds = await tweetLikeDatabase.queryAllId((collection) =>
       collection.where('tweet_id', '==', tweet_id),
@@ -178,16 +194,78 @@ export const deleteTweet: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * (TODO) 특정 트윗 리트윗하기
+ * 특정 트윗 리트윗하기
  * @route POST /api/tweets/{tweet_id}/retweet
  * @group tweets - 트윗 관련
  * @returns {Tweet.model} 200 - 생성된 트윗 정보
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
- * @returns {Error} 10402 - 400 존재하지 않는 아이디이거나 비밀번호가 잘못 입력되었습니다.
+ * @returns {Error} 10506 - 400 이미 리트윗한 트윗입니다.
  */
 export const createRetweet: RequestHandler = async (req, res, next) => {
   try {
-    // TODO
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const newRetweetId = TweetLib.getRetweetId(currentUserId, tweet_id);
+    const hasRetweet = await retweetDatabase.has(newRetweetId);
+
+    if (hasRetweet) {
+      throw new Error('TWEETS_RETWEET_ALREADY_EXIST');
+    }
+
+    const newRetweetModel: RetweetModel = {
+      retweet_user_id: currentUserId,
+      retweet_tweet_id: tweet_id,
+      retweeted_at: getCurrentDate(),
+    };
+
+    await retweetDatabase.add(newRetweetId, newRetweetModel);
+    res.status(201).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 특정 트윗 리트윗 취소
+ * @route DELETE /api/tweets/{tweet_id}/retweet
+ * @group tweets - 트윗 관련
+ * @returns {Tweet.model} 200 - 생성된 트윗 정보
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10507 - 400 리트윗 취소를 할 수 없습니다.
+ */
+export const cancelRetweet: RequestHandler = async (req, res, next) => {
+  try {
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const retweetId = TweetLib.getRetweetId(currentUserId, tweet_id);
+    const hasRetweet = await retweetDatabase.has(retweetId);
+
+    if (!hasRetweet) {
+      throw new Error('TWEETS_RETWEET_NO_EXIST');
+    }
+
+    await retweetDatabase.remove(retweetId);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
@@ -223,7 +301,7 @@ export const createReply: RequestHandler = async (req, res, next) => {
     const replyTweetModel: TweetModel = {
       type: 'reply',
       tweet_id: replyId,
-      tweeted_at: Date(),
+      tweeted_at: getCurrentDate(),
       writer_id: currentUserId,
       content,
       image_src_list,
@@ -231,7 +309,7 @@ export const createReply: RequestHandler = async (req, res, next) => {
     };
     await tweetDatabase.add(replyId, replyTweetModel);
 
-    const replyTweet: Tweet = await TweetLib.getTweetFromModel(
+    const replyTweet: Tweet = await TweetLib.getTweetFromTweetModel(
       replyTweetModel,
       {
         currentUserId,
@@ -277,7 +355,7 @@ export const likeTweet: RequestHandler = async (req, res, next) => {
     const newTweetLikeModel: TweetLikeModel = {
       user_id,
       tweet_id,
-      like_at: Date(),
+      like_at: getCurrentDate(),
     };
 
     await tweetLikeDatabase.add(newTweetLikeId, newTweetLikeModel);
@@ -325,37 +403,81 @@ export const dislikeTweet: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * (PROGRESS) 트윗 피드 가져오기 - 페이지네이션 (팔로잉된 유저만? 전부?)
+ * 트윗 피드 가져오기 - 페이지네이션 (자기 자신 트윗 + 팔로잉한 유저 트윗/리트윗)
  * @route POST /api/tweets/feed
  * @group tweets - 트윗 관련
  * @param {tweetFeedEntry.model} tweetFeedEntry.body - 트윗 피드 리스트 조건
  * @returns {Array.<Tweet>} 200 - 트윗 리스트
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
  */
 export const getTweetsFeed: RequestHandler = async (req, res, next) => {
   try {
-    /*
-      TODO
-      1. 로그인 된 상태라면 팔로잉 유저 것만 가져오기. 지금은 모든 tweet에서 가져옴
-      2. 리얼타임을 어떻게 더 잘 대응할 수 있을까?
-      3. 쿼리 제대로된 정의 필요. 지금은 쿼리 따로 없음
-      4. 정렬도 시간 역순으로 하는게 맞는지 고민해보기
-    */
-    const currentUserId = res.locals.user?.user_id;
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
     const { offset, count } = req.body;
 
-    // TODO: 개선필요: 정확하게 count만큼만 가져오는 방법?
-    let tweetModels = await tweetDatabase.queryAll((collection) =>
-      collection.orderBy('tweeted_at', 'desc').limit(offset - 1 + count),
-    );
-    tweetModels = tweetModels.slice(offset - 1);
-
-    const tweets: Tweet[] = await Promise.all(
-      tweetModels.map(async (tweetModel) => {
-        return await TweetLib.getTweetFromModel(tweetModel, { currentUserId });
-      }),
+    const userFollowList = await userFollowDatabase.queryAll((collection) =>
+      collection.where('following_user_id', '==', currentUserId),
     );
 
-    res.status(200).send(tweets);
+    const followingUserIdList = userFollowList.map(
+      (userFollow) => userFollow.followed_user_id,
+    );
+
+    const tweetModelList = await tweetDatabase.queryAll(
+      (collection) =>
+        collection
+          .where('writer_id', 'in', [currentUserId, ...followingUserIdList])
+          .orderBy('tweeted_at', 'desc')
+          .limit(offset - 1 + count), // TODO: need to limit 'from'
+    );
+
+    const retweetModelList = !followingUserIdList
+      ? []
+      : await retweetDatabase.queryAll(
+          (collection) =>
+            collection
+              .where('retweet_user_id', 'in', followingUserIdList)
+              .orderBy('retweeted_at', 'desc')
+              .limit(offset - 1 + count), // TODO: need to limit 'from'
+        );
+
+    const tweetGetter = (tweetModel: TweetModel) =>
+      TweetLib.getTweetFromTweetModel(tweetModel, { currentUserId });
+
+    const retweetGetter = (retweetModel: RetweetModel) =>
+      TweetLib.getTweetFromRetweetModel(retweetModel, { currentUserId });
+
+    const getterList: { at: string; getter: () => Promise<Tweet> }[] = [
+      ...tweetModelList.map((tweetModel) => ({
+        at: tweetModel.tweeted_at,
+        getter: () => tweetGetter(tweetModel),
+      })),
+      ...retweetModelList.map((retweetModel) => ({
+        at: retweetModel.retweeted_at,
+        getter: () => retweetGetter(retweetModel),
+      })),
+    ];
+
+    const feed = await Promise.all(
+      getterList
+        .sort((item1, item2) => {
+          if (Date.parse(item1.at) >= Date.parse(item2.at)) {
+            return -1;
+          }
+          if (Date.parse(item1.at) === Date.parse(item2.at)) {
+            return 0;
+          }
+          return 1;
+        })
+        .slice(offset - 1, offset - 1 + count)
+        .map((item) => item.getter()),
+    );
+
+    res.status(200).send(feed);
   } catch (error) {
     next(error);
   }

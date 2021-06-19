@@ -1,7 +1,8 @@
 import { RequestHandler } from 'express';
 import { User, UserModel } from 'models/User';
-import { createHash } from '../../utils';
+import { createHash, getCurrentDate } from '../../utils';
 import {
+  retweetDatabase,
   tweetLikeDatabase,
   userDatabase,
   userFollowDatabase,
@@ -126,13 +127,12 @@ export const signup: RequestHandler = async (req, res, next) => {
     }
 
     const hashedInputPassword = await createHash(password);
-    const currentDate = Date();
 
     const newUserModel: UserModel = {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
-      joined_at: currentDate,
+      joined_at: getCurrentDate(),
     };
 
     await userDatabase.add(newId, newUserModel);
@@ -158,6 +158,13 @@ export const signout: RequestHandler = async (req, res, next) => {
     const { user_id } = res.locals.user;
 
     await userDatabase.remove(user_id);
+
+    // Retweet Database에서도 관련 내용 삭제
+    const retweetIds = await retweetDatabase.queryAllId((collection) =>
+      collection.where('retweet_user_id', '==', user_id),
+    );
+
+    Promise.all(retweetIds.map((id) => retweetDatabase.remove(id)));
 
     // TweetLike Database에서도 관련 내용 삭제
     const tweetLikeIds = await tweetLikeDatabase.queryAllId((collection) =>

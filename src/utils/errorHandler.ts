@@ -67,6 +67,16 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10505,
     msg: '좋아요 취소를 할 수 없는 트윗입니다.',
   },
+  TWEETS_RETWEET_ALREADY_EXIST: {
+    statusCode: 400,
+    errorCode: 10506,
+    msg: '이미 리트윗한 트윗입니다.',
+  },
+  TWEETS_RETWEET_NO_EXIST: {
+    statusCode: 400,
+    errorCode: 10507,
+    msg: '리트윗 취소를 할 수 없습니다.',
+  },
   USERS_INVALID_USER_ID: {
     statusCode: 404,
     errorCode: 10601,

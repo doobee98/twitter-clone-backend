@@ -18,3 +18,5 @@ export const sanitizeUndefined = (obj: { [key: string]: any }) => {
   });
   return objCopied;
 };
+
+export const getCurrentDate = () => new Date().toISOString();
