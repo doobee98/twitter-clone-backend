@@ -70,7 +70,9 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
 
     const tweets: Tweet[] = await Promise.all(
       tweetModels.map(async (tweetModel) => {
-        return await TweetLib.getTweetFromModel(tweetModel, { currentUserId });
+        return await TweetLib.getTweetFromTweetModel(tweetModel, {
+          currentUserId,
+        });
       }),
     );
 

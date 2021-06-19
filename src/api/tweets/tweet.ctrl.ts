@@ -1,6 +1,11 @@
 import { RequestHandler } from 'express';
 import { Tweet, TweetModel } from 'models/Tweet';
-import { tweetDatabase, tweetLikeDatabase, userDatabase } from '../firebase';
+import {
+  retweetDatabase,
+  tweetDatabase,
+  tweetLikeDatabase,
+  userDatabase,
+} from '../firebase';
 import { arrayEquals } from '../../utils';
 import * as TweetLib from './tweet.lib';
 import { TweetLikeModel } from 'models/TweetLike';
@@ -48,6 +53,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
       retweet_count: 0,
       like_count: 0,
       like_flag: false,
+      retweet_flag: false,
     };
 
     res.status(201).send(newTweet);
@@ -73,7 +79,7 @@ export const getTweet: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    const tweet = await TweetLib.getTweetFromModel(tweetModel, {
+    const tweet = await TweetLib.getTweetFromTweetModel(tweetModel, {
       currentUserId,
     });
 
@@ -127,7 +133,9 @@ export const editTweet: RequestHandler = async (req, res, next) => {
 
     await tweetDatabase.update(tweet_id, { content, image_src_list });
 
-    const tweet = TweetLib.getTweetFromModel(tweetModel, { currentUserId });
+    const tweet = TweetLib.getTweetFromTweetModel(tweetModel, {
+      currentUserId,
+    });
 
     res.status(201).send(tweet);
   } catch (error) {
@@ -163,6 +171,13 @@ export const deleteTweet: RequestHandler = async (req, res, next) => {
     }
 
     await tweetDatabase.remove(tweet_id);
+
+    // Retweet Database에서도 관련 내용 삭제
+    const retweetIds = await retweetDatabase.queryAllId((collection) =>
+      collection.where('retweet_tweet_id', '==', tweet_id),
+    );
+
+    Promise.all(retweetIds.map((id) => retweetDatabase.remove(id)));
 
     // TweetLike Database에서도 관련 내용 삭제
     const tweetLikeIds = await tweetLikeDatabase.queryAllId((collection) =>
@@ -231,7 +246,7 @@ export const createReply: RequestHandler = async (req, res, next) => {
     };
     await tweetDatabase.add(replyId, replyTweetModel);
 
-    const replyTweet: Tweet = await TweetLib.getTweetFromModel(
+    const replyTweet: Tweet = await TweetLib.getTweetFromTweetModel(
       replyTweetModel,
       {
         currentUserId,
@@ -351,7 +366,9 @@ export const getTweetsFeed: RequestHandler = async (req, res, next) => {
 
     const tweets: Tweet[] = await Promise.all(
       tweetModels.map(async (tweetModel) => {
-        return await TweetLib.getTweetFromModel(tweetModel, { currentUserId });
+        return await TweetLib.getTweetFromTweetModel(tweetModel, {
+          currentUserId,
+        });
       }),
     );
 
