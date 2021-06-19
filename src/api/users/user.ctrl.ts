@@ -3,13 +3,15 @@ import { User, UserModel } from 'models/User';
 import * as UserLib from './user.lib';
 import * as TweetLib from '../tweets/tweet.lib';
 import {
+  retweetDatabase,
   tweetDatabase,
   tweetLikeDatabase,
   userDatabase,
   userFollowDatabase,
 } from '../firebase';
 import { UserFollowModel } from 'models/UserFollow';
-import { Tweet, TweetList, TweetModel } from 'models/Tweet';
+import { RetweetModel, Tweet, TweetList, TweetModel } from 'models/Tweet';
+import { getCurrentDate } from '../../utils';
 
 /**
  * 유저 정보 가져오기
@@ -36,7 +38,7 @@ export const getUser: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * 특정 유저의 트윗 피드 가져오기 - 페이지네이션
+ * 특정 유저의 트윗 피드 가져오기 - 페이지네이션 (유저의 트윗 + 유저의 리트윗)
  * @route POST /api/users/{user_id}/feed
  * @group users - 유저 관련
  * @param {tweetFeedEntry.model} tweetFeedEntry.body - 트윗 피드 리스트 조건
@@ -47,38 +49,65 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
     const currentUserId = res.locals.user?.user_id;
     const { offset, count } = req.body;
     const { user_id } = req.params;
-    const userModel = await userDatabase.get(user_id);
+    const isValidUserId = await userDatabase.has(user_id);
 
-    if (!userModel) {
+    if (!isValidUserId) {
       throw new Error('USERS_INVALID_USER_ID');
     }
 
-    const tweetIds = await tweetDatabase.queryAllId((collection) =>
-      collection
-        .where('writer_id', '==', user_id)
-        .orderBy('tweeted_at', 'desc'),
+    const tweetModelList = await tweetDatabase.queryAll(
+      (collection) =>
+        collection
+          .where('writer_id', '==', currentUserId)
+          .orderBy('tweeted_at', 'desc')
+          .limit(offset - 1 + count), // TODO: need to limit 'from'
     );
 
-    const totalCount = tweetIds.length;
-    const tweetModels = (
-      await Promise.all(
-        tweetIds
-          .slice(offset - 1, offset - 1 + count)
-          .map((id) => tweetDatabase.get(id)),
-      )
-    ).filter((t): t is TweetModel => t !== undefined);
+    const retweetModelList = await retweetDatabase.queryAll(
+      (collection) =>
+        collection
+          .where('retweet_user_id', '==', currentUserId)
+          .orderBy('retweeted_at', 'desc')
+          .limit(offset - 1 + count), // TODO: need to limit 'from'
+    );
 
-    const tweets: Tweet[] = await Promise.all(
-      tweetModels.map(async (tweetModel) => {
-        return await TweetLib.getTweetFromTweetModel(tweetModel, {
-          currentUserId,
-        });
-      }),
+    const tweetGetter = (tweetModel: TweetModel) =>
+      TweetLib.getTweetFromTweetModel(tweetModel, { currentUserId });
+
+    const retweetGetter = (retweetModel: RetweetModel) =>
+      TweetLib.getTweetFromRetweetModel(retweetModel, { currentUserId });
+
+    const getterList: { at: string; getter: () => Promise<Tweet> }[] = [
+      ...tweetModelList.map((tweetModel) => ({
+        at: tweetModel.tweeted_at,
+        getter: () => tweetGetter(tweetModel),
+      })),
+      ...retweetModelList.map((retweetModel) => ({
+        at: retweetModel.retweeted_at,
+        getter: () => retweetGetter(retweetModel),
+      })),
+    ];
+
+    const totalCount = getterList.length; // Tweet, Retweet
+
+    const feed = await Promise.all(
+      getterList
+        .sort((item1, item2) => {
+          if (Date.parse(item1.at) >= Date.parse(item2.at)) {
+            return -1;
+          }
+          if (Date.parse(item1.at) === Date.parse(item2.at)) {
+            return 0;
+          }
+          return 1;
+        })
+        .slice(offset - 1, offset - 1 + count)
+        .map((item) => item.getter()),
     );
 
     const response: TweetList = {
       totalCount,
-      data: tweets,
+      data: feed,
     };
 
     res.status(200).send(response);
@@ -129,7 +158,7 @@ export const followUser: RequestHandler = async (req, res, next) => {
     const newUserFollowModel: UserFollowModel = {
       following_user_id: currentUserId,
       followed_user_id: followedUserId,
-      following_at: Date(),
+      following_at: getCurrentDate(),
     };
     await userFollowDatabase.add(newUserFollowId, newUserFollowModel);
 

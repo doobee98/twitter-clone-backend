@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { User, UserModel } from 'models/User';
-import { createHash } from '../../utils';
+import { createHash, getCurrentDate } from '../../utils';
 import {
   retweetDatabase,
   tweetLikeDatabase,
@@ -127,13 +127,12 @@ export const signup: RequestHandler = async (req, res, next) => {
     }
 
     const hashedInputPassword = await createHash(password);
-    const currentDate = Date();
 
     const newUserModel: UserModel = {
       user_id: newId,
       hashed_password: hashedInputPassword,
       username,
-      joined_at: currentDate,
+      joined_at: getCurrentDate(),
     };
 
     await userDatabase.add(newId, newUserModel);
