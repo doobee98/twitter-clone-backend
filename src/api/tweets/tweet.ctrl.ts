@@ -435,15 +435,16 @@ export const getTweetsFeed: RequestHandler = async (req, res, next) => {
           .limit(offset - 1 + count), // TODO: need to limit 'from'
     );
 
-    const retweetModelList = !followingUserIdList
-      ? []
-      : await retweetDatabase.queryAll(
-          (collection) =>
-            collection
-              .where('retweet_user_id', 'in', followingUserIdList)
-              .orderBy('retweeted_at', 'desc')
-              .limit(offset - 1 + count), // TODO: need to limit 'from'
-        );
+    const retweetModelList =
+      !followingUserIdList || followingUserIdList.length === 0
+        ? []
+        : await retweetDatabase.queryAll(
+            (collection) =>
+              collection
+                .where('retweet_user_id', 'in', followingUserIdList)
+                .orderBy('retweeted_at', 'desc')
+                .limit(offset - 1 + count), // TODO: need to limit 'from'
+          );
 
     const tweetGetter = (tweetModel: TweetModel) =>
       TweetLib.getTweetFromTweetModel(tweetModel, { currentUserId });
