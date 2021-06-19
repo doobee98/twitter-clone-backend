@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { Tweet, TweetModel } from 'models/Tweet';
+import { RetweetModel, Tweet, TweetModel } from 'models/Tweet';
 import {
   retweetDatabase,
   tweetDatabase,
@@ -193,16 +193,78 @@ export const deleteTweet: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * (TODO) 특정 트윗 리트윗하기
+ * 특정 트윗 리트윗하기
  * @route POST /api/tweets/{tweet_id}/retweet
  * @group tweets - 트윗 관련
  * @returns {Tweet.model} 200 - 생성된 트윗 정보
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
- * @returns {Error} 10402 - 400 존재하지 않는 아이디이거나 비밀번호가 잘못 입력되었습니다.
+ * @returns {Error} 10506 - 400 이미 리트윗한 트윗입니다.
  */
 export const createRetweet: RequestHandler = async (req, res, next) => {
   try {
-    // TODO
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const newRetweetId = TweetLib.getRetweetId(currentUserId, tweet_id);
+    const hasRetweet = await retweetDatabase.has(newRetweetId);
+
+    if (hasRetweet) {
+      throw new Error('TWEETS_RETWEET_ALREADY_EXIST');
+    }
+
+    const newRetweetModel: RetweetModel = {
+      retweet_user_id: currentUserId,
+      retweet_tweet_id: tweet_id,
+      retweeted_at: Date(),
+    };
+
+    await retweetDatabase.add(newRetweetId, newRetweetModel);
+    res.status(201).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 특정 트윗 리트윗 취소
+ * @route DELETE /api/tweets/{tweet_id}/retweet
+ * @group tweets - 트윗 관련
+ * @returns {Tweet.model} 200 - 생성된 트윗 정보
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10507 - 400 리트윗 취소를 할 수 없습니다.
+ */
+export const cancelRetweet: RequestHandler = async (req, res, next) => {
+  try {
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
+    const { tweet_id } = req.params;
+    const tweet = await tweetDatabase.get(tweet_id);
+
+    if (!tweet) {
+      throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    const retweetId = TweetLib.getRetweetId(currentUserId, tweet_id);
+    const hasRetweet = await retweetDatabase.has(retweetId);
+
+    if (!hasRetweet) {
+      throw new Error('TWEETS_RETWEET_NO_EXIST');
+    }
+
+    await retweetDatabase.remove(retweetId);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
