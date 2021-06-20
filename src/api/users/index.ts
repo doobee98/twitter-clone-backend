@@ -3,6 +3,8 @@ import * as userCtrl from './user.ctrl';
 
 const router = Router();
 
+router.get('/search', userCtrl.searchUser);
+
 router.get('/:user_id', userCtrl.getUser);
 router.post('/:user_id/feed', userCtrl.getUserFeed);
 
