@@ -38,6 +38,74 @@ export const getUser: RequestHandler = async (req, res, next) => {
 };
 
 /**
+ * 유저 검색하기
+ * @route GET /api/users/search
+ * @group users - 유저 관련
+ * @param {string} keyword.required
+ * @returns {Array.<User>} 200 - 검색된 유저 리스트
+ * @returns {Error} 10604 - 400 잘못된 검색 쿼리입니다.
+ */
+export const searchUser: RequestHandler = async (req, res, next) => {
+  try {
+    const { keyword } = req.query;
+    if (!keyword) {
+      throw new Error('USERS_INVALID_SEARCH_KEYWORD');
+    }
+
+    const keywordLowercase = keyword.toString().toLowerCase();
+
+    const resultLimit = 10;
+    const resultByUserId = await userDatabase.queryAllId((collection) =>
+      collection
+        .orderBy('user_id_lowercase')
+        .startAt(keywordLowercase)
+        .endAt(keywordLowercase + '\uf8ff')
+        .limit(resultLimit),
+    );
+    const resultByUsername = await userDatabase.queryAllId((collection) =>
+      collection
+        .orderBy('username_lowercase')
+        .startAt(keywordLowercase)
+        .endAt(keywordLowercase + '\uf8ff')
+        .limit(resultLimit),
+    );
+
+    const baseScore = 0;
+    const maxScore = Math.max(resultByUserId.length, resultByUsername.length);
+    let scoreTable: Record<string, number> = {};
+
+    for (let i = 0; i < resultByUserId.length; i++) {
+      const currentId = resultByUserId[i];
+      const currentScore = maxScore - i;
+
+      if (!scoreTable[currentId]) {
+        scoreTable[currentId] = baseScore;
+      }
+      scoreTable[currentId] += currentScore;
+    }
+
+    for (let i = 0; i < resultByUsername.length; i++) {
+      const currentId = resultByUsername[i];
+      const currentScore = maxScore - i;
+
+      if (!scoreTable[currentId]) {
+        scoreTable[currentId] = baseScore;
+      }
+      scoreTable[currentId] += currentScore;
+    }
+
+    const result = Object.entries(scoreTable)
+      .sort(([id1, score1], [id2, score2]) => score2 - score1)
+      .slice(resultLimit)
+      .map(([id, score]) => id);
+
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 특정 유저의 트윗 피드 가져오기 - 페이지네이션 (유저의 트윗 + 유저의 리트윗)
  * @route POST /api/users/{user_id}/feed
  * @group users - 유저 관련

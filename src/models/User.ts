@@ -37,5 +37,7 @@ export interface UserModel {
   website?: string;
   location?: string;
 
+  user_id_lowercase: string;
+  username_lowercase: string;
   hashed_password?: string;
 }

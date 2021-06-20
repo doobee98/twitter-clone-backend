@@ -130,8 +130,10 @@ export const signup: RequestHandler = async (req, res, next) => {
 
     const newUserModel: UserModel = {
       user_id: newId,
+      user_id_lowercase: newId.toLowerCase(),
       hashed_password: hashedInputPassword,
       username,
+      username_lowercase: username.toLowerCase(),
       joined_at: getCurrentDate(),
     };
 

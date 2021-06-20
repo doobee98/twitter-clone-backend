@@ -1,6 +1,12 @@
 import { userFollowDatabase } from '../../api/firebase';
 import { User, UserModel } from 'models/User';
 
+interface TempUser extends User {
+  hashed_password?: string;
+  user_id_lowercase?: string;
+  username_lowercase?: string;
+}
+
 export const getUserFollowId = (userId: string, followUserId: string) => {
   return `${userId}-${followUserId}`;
 };
@@ -31,7 +37,7 @@ export const getUserFromModel = async (
     followingFlag = await userFollowDatabase.has(userFollowId);
   }
 
-  const user = {
+  const user: TempUser = {
     ...userModel,
     following_count: followingCount,
     follower_count: followerCount,
@@ -39,6 +45,8 @@ export const getUserFromModel = async (
   };
 
   delete user.hashed_password;
+  delete user.user_id_lowercase;
+  delete user.username_lowercase;
 
   return user;
 };

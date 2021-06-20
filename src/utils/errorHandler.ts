@@ -97,6 +97,11 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10604,
     msg: '자기 자신을 팔로우할 수 없습니다.',
   },
+  USERS_INVALID_SEARCH_KEYWORD: {
+    statusCode: 400,
+    errorCode: 10604,
+    msg: '잘못된 검색 쿼리입니다.',
+  },
 };
 
 const defaultErrorType = 'INTERNAL_SERVER_ERROR';
