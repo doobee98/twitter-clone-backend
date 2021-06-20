@@ -187,3 +187,40 @@ export const signout: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * 회원정보 변경
+ * @route POST /api/auth/edit
+ * @group auth - 계정 관련
+ * @param {editInfoEntry.model} editInfoEntry.body - 회원정보 변경
+ * @returns {User.model} 201 - 변경된 사용자 정보
+ * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10402 - 400 존재하지 않는 아이디이거나 비밀번호가 잘못 입력되었습니다.
+ */
+ export const editInfo: RequestHandler = async (req, res, next) => {
+  try {
+    if (!res.locals.user) {
+      throw new Error('AUTH_NOT_LOGINED');
+    }
+
+    const { user_id: currentUserId } = res.locals.user;
+
+    // const { username, profile_img_src, bio, website, location } = req.body;
+    const editContent = req.body;
+    await userDatabase.update(currentUserId, editContent);
+
+    const newUserModel = await userDatabase.get(currentUserId);
+
+    if (!newUserModel) {
+      throw new Error('AUTH_INCORRECT_USER_ID_OR_PASSWORD');
+    }
+
+    const newUser = await UserLib.getUserFromModel(newUserModel, {
+      currentUserId,
+    });
+
+    res.status(201).send(newUser);
+  } catch (error) {
+    next(error);
+  }
+};

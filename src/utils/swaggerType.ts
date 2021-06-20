@@ -18,6 +18,16 @@
  * @property {string} username.required
  */
 
+/**
+ * 회원정보 변경
+ * @typedef editInfoEntry
+ * @property {string} username
+ * @property {string} profile_img_src
+ * @property {string} bio
+ * @property {string} website
+ * @property {string} location
+ */
+
 /* ============================
  * Tweets 내에서 사용되는 typedef
  * ============================

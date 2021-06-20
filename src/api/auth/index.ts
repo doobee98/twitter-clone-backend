@@ -12,4 +12,6 @@ router.get('/info', authCtrl.info);
 router.post('/signup', authCtrl.signup);
 router.delete('/signout', authCtrl.signout);
 
+router.post('/editInfo', authCtrl.editInfo);
+
 export default router;
