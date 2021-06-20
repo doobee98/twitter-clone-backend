@@ -87,6 +87,11 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10507,
     msg: '리트윗 취소를 할 수 없습니다.',
   },
+  TWEETS_NO_CONTENT: {
+    statusCode: 400,
+    errorCode: 10508,
+    msg: '내용이 없는 트윗입니다.',
+  },
   USERS_INVALID_USER_ID: {
     statusCode: 404,
     errorCode: 10601,
