@@ -206,7 +206,7 @@ export const signout: RequestHandler = async (req, res, next) => {
 
 /**
  * 회원정보 변경
- * @route POST /api/auth/edit
+ * @route POST /api/auth/editInfo
  * @group auth - 계정 관련
  * @param {editInfoEntry.model} editInfoEntry.body - 회원정보 변경
  * @returns {User.model} 201 - 변경된 사용자 정보
