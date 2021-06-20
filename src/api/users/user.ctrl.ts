@@ -47,6 +47,7 @@ export const getUser: RequestHandler = async (req, res, next) => {
  */
 export const searchUser: RequestHandler = async (req, res, next) => {
   try {
+    const currentUserId = res.locals.user?.user_id;
     const { keyword } = req.query;
     if (!keyword) {
       throw new Error('USERS_INVALID_SEARCH_KEYWORD');
@@ -94,10 +95,22 @@ export const searchUser: RequestHandler = async (req, res, next) => {
       scoreTable[currentId] += currentScore;
     }
 
-    const result = Object.entries(scoreTable)
-      .sort(([id1, score1], [id2, score2]) => score2 - score1)
-      .slice(0, resultLimit)
-      .map(([id, score]) => id);
+    const resultUserModelList = await Promise.all(
+      Object.entries(scoreTable)
+        .sort(([id1, score1], [id2, score2]) => score2 - score1)
+        .slice(0, resultLimit)
+        .map(([id, score]) => userDatabase.get(id)),
+    );
+
+    const result = (
+      await Promise.all(
+        resultUserModelList.map((userModel) =>
+          userModel
+            ? UserLib.getUserFromModel(userModel, { currentUserId })
+            : undefined,
+        ),
+      )
+    ).filter((user) => user !== undefined);
 
     res.status(200).send(result);
   } catch (error) {
