@@ -22,7 +22,7 @@ export const passwordRegex = /^[a-zA-Z0-9!@#$%^&+=]{4,15}$/;
 export const usernameRegex = /^[a-zA-Z0-9!@#$%^&+=ㄱ-ㅎㅏ-ㅣ가-힣]{2,10}$/;
 
 export const isReservedUserId = (userId: string) => {
-  return userId.toLowerCase() in invalidUserIdList;
+  return invalidUserIdList.includes(userId.toLowerCase());
 };
 
 interface JwtCertificate {

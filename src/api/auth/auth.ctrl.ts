@@ -131,7 +131,7 @@ export const signup: RequestHandler = async (req, res, next) => {
     const isValidUsername = AuthLib.usernameRegex.test(username);
     const isValidPassword = AuthLib.passwordRegex.test(password);
 
-    if (!isValidUserId || !isValidUsername || isValidPassword) {
+    if (!isValidUserId || !isValidUsername || !isValidPassword) {
       throw new Error('AUTH_BAD_SIGNUP_PARAMS');
     }
 
