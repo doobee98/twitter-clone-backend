@@ -26,7 +26,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
     }
 
     const { user_id: writer_id } = res.locals.user;
-    const { content, image_src_list } = req.body;
+    const { content, image_src_list, reply_permission } = req.body;
 
     const writer = await userDatabase.get(writer_id);
     if (!writer) {
@@ -43,6 +43,7 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
       writer_id,
       content,
       image_src_list,
+      reply_permission,
     };
     await tweetDatabase.add(tweet_id, newTweetModel);
 
@@ -109,7 +110,7 @@ export const editTweet: RequestHandler = async (req, res, next) => {
 
     const currentUserId = res.locals.user?.user_id;
     const { user_id: writer_id } = res.locals.user;
-    const { content, image_src_list } = req.body;
+    const { content, image_src_list, reply_permission } = req.body;
     const { tweet_id } = req.params;
     const tweetModel = await tweetDatabase.get(tweet_id);
 

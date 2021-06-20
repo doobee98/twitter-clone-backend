@@ -8,6 +8,7 @@
  * @property {string} writer_profile_img_src
  * @property {string} content.required
  * @property {Array.<string>} image_src_list
+ * @property {string} reply_permission - follower | undefined (default: all users)
  * @property {number} reply_count.required
  * @property {number} retweet_count.required
  * @property {number} like_count.required
@@ -28,6 +29,7 @@ export interface Tweet {
 
   content: string;
   image_src_list?: string[];
+  reply_permission?: 'follower';
 
   reply_count: number;
   retweet_count: number;
@@ -50,6 +52,7 @@ export interface TweetModel {
 
   content: string;
   image_src_list?: string[];
+  reply_permission?: 'follower';
 
   reply_id?: string;
 }

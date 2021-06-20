@@ -28,6 +28,7 @@
  * @typedef tweetCreateEntry
  * @property {string} content.required
  * @property {Array.<string>} image_src_list
+ * @property {string} reply_permission - follower | undefined (default: all users)
  */
 
 /**
@@ -35,6 +36,7 @@
  * @typedef tweetEditEntry
  * @property {string} content
  * @property {Array.<string>} image_src_list
+ * @property {string} reply_permission - follower | undefined (default: all users)
  */
 
 /**
