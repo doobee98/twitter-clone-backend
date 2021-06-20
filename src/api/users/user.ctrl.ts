@@ -96,7 +96,7 @@ export const searchUser: RequestHandler = async (req, res, next) => {
 
     const result = Object.entries(scoreTable)
       .sort(([id1, score1], [id2, score2]) => score2 - score1)
-      .slice(resultLimit)
+      .slice(0, resultLimit)
       .map(([id, score]) => id);
 
     res.status(200).send(result);
