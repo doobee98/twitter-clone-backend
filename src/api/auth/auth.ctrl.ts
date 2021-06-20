@@ -112,6 +112,8 @@ export const logout: RequestHandler = async (req, res, next) => {
  * @returns {User.model} 201 - 해당 사용자 정보
  * @returns {Error} 10405 - 400 이미 로그인 되어 있습니다.
  * @returns {Error} 10401 - 400 이미 존재하는 아이디 입니다.
+ * @returns {Error} 10407 - 400 회원가입 정보가 잘못되었습니다.
+ * @returns {Error} 10408 - 400 사용할 수 없는 아이디입니다.
  */
 export const signup: RequestHandler = async (req, res, next) => {
   try {
@@ -120,6 +122,18 @@ export const signup: RequestHandler = async (req, res, next) => {
     }
 
     const { id: newId, password, username } = req.body;
+
+    if (AuthLib.isReservedUserId(newId)) {
+      throw new Error('AUTH_RESERVED_USER_ID');
+    }
+
+    const isValidUserId = AuthLib.userIdRegex.test(newId);
+    const isValidUsername = AuthLib.usernameRegex.test(username);
+    const isValidPassword = AuthLib.passwordRegex.test(password);
+
+    if (!isValidUserId || !isValidUsername || isValidPassword) {
+      throw new Error('AUTH_BAD_SIGNUP_PARAMS');
+    }
 
     const isAlreadyExistUser = await userDatabase.has(newId);
     if (isAlreadyExistUser) {
@@ -199,7 +213,7 @@ export const signout: RequestHandler = async (req, res, next) => {
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10402 - 400 존재하지 않는 아이디이거나 비밀번호가 잘못 입력되었습니다.
  */
- export const editInfo: RequestHandler = async (req, res, next) => {
+export const editInfo: RequestHandler = async (req, res, next) => {
   try {
     if (!res.locals.user) {
       throw new Error('AUTH_NOT_LOGINED');

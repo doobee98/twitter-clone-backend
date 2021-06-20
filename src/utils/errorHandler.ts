@@ -42,6 +42,16 @@ const errorDictionary: Record<string, ErrorResponse> = {
     errorCode: 10406,
     msg: '로그인이 필요합니다.',
   },
+  AUTH_BAD_SIGNUP_PARAMS: {
+    statusCode: 400,
+    errorCode: 10407,
+    msg: '회원가입 정보가 잘못되었습니다.',
+  },
+  AUTH_RESERVED_USER_ID: {
+    statusCode: 400,
+    errorCode: 10408,
+    msg: '사용할 수 없는 아이디입니다.',
+  },
   TWEETS_NOT_EXIST: {
     statusCode: 404,
     errorCode: 10501,
@@ -76,6 +86,11 @@ const errorDictionary: Record<string, ErrorResponse> = {
     statusCode: 400,
     errorCode: 10507,
     msg: '리트윗 취소를 할 수 없습니다.',
+  },
+  TWEETS_NO_CONTENT: {
+    statusCode: 400,
+    errorCode: 10508,
+    msg: '내용이 없는 트윗입니다.',
   },
   USERS_INVALID_USER_ID: {
     statusCode: 404,

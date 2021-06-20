@@ -4,6 +4,27 @@ import * as jwt from 'jsonwebtoken';
 import { User } from 'models/User';
 import config from '../../config';
 
+const invalidUserIdList = [
+  'search',
+  'test',
+  'login',
+  'home',
+  'explore',
+  'notifications',
+  'messages',
+  'bookmarks',
+  'lists',
+  'i',
+];
+
+export const userIdRegex = /^[a-zA-Z0-9]{4,10}$/;
+export const passwordRegex = /^[a-zA-Z0-9!@#$%^&+=]{4,15}$/;
+export const usernameRegex = /^[a-zA-Z0-9!@#$%^&+=ㄱ-ㅎㅏ-ㅣ가-힣]{2,10}$/;
+
+export const isReservedUserId = (userId: string) => {
+  return userId.toLowerCase() in invalidUserIdList;
+};
+
 interface JwtCertificate {
   user_id: string;
   iat: number;

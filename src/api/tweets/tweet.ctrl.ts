@@ -18,6 +18,7 @@ import { TweetLikeModel } from 'models/TweetLike';
  * @param {tweetCreateEntry.model} tweetCreateEntry.body - 새로운 트윗 입력
  * @returns {Tweet.model} 201 - 생성된 트윗 정보
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10508 - 400 내용이 없는 트윗입니다.
  */
 export const createNewTweet: RequestHandler = async (req, res, next) => {
   try {
@@ -32,6 +33,10 @@ export const createNewTweet: RequestHandler = async (req, res, next) => {
     if (!writer) {
       // TODO: 여기에서 ERROR를 내보내는게 좀 이상하다.
       throw new Error('USERS_INVALID_USER_ID');
+    }
+
+    if (!content) {
+      throw new Error('TWEETS_NO_CONTENT');
     }
 
     const tweet_id = await tweetDatabase.generateAutoId();
@@ -100,6 +105,7 @@ export const getTweet: RequestHandler = async (req, res, next) => {
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
  * @returns {Error} 10502 - 401 해당 트윗 수정 권한이 없습니다.
+ * @returns {Error} 10508 - 400 내용이 없는 트윗입니다.
  * @returns {Error} 10503 - 400 변경 사항이 없습니다.
  */
 export const editTweet: RequestHandler = async (req, res, next) => {
@@ -122,12 +128,12 @@ export const editTweet: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NO_EDIT_PERMISSION');
     }
 
-    if (!content && !image_src_list) {
-      throw new Error('TWEETS_NO_EDIT_CONTENT');
+    if (!content) {
+      throw new Error('TWEETS_NO_CONTENT');
     }
 
     if (
-      content === tweetModel.content ||
+      content === tweetModel.content &&
       arrayEquals(image_src_list, tweetModel.image_src_list ?? [])
     ) {
       throw new Error('TWEETS_NO_EDIT_CONTENT');
@@ -279,6 +285,7 @@ export const cancelRetweet: RequestHandler = async (req, res, next) => {
  * @param {tweetCreateEntry.model} tweetCreateEntry.body - 새로운 트윗 입력
  * @returns {Tweet.model} 201 - 생성된 트윗 정보
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
+ * @returns {Error} 10508 - 400 내용이 없는 트윗입니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
  */
 export const createReply: RequestHandler = async (req, res, next) => {
@@ -290,6 +297,10 @@ export const createReply: RequestHandler = async (req, res, next) => {
     const currentUserId = res.locals.user?.user_id;
     const { tweet_id: reply_id } = req.params;
     const { content, image_src_list } = req.body;
+
+    if (!content) {
+      throw new Error('TWEETS_NO_CONTENT');
+    }
 
     const hasTweet = await tweetDatabase.has(reply_id);
 
