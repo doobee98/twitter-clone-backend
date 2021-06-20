@@ -9,6 +9,7 @@ import {
 } from '../firebase';
 import { arrayEquals, getCurrentDate } from '../../utils';
 import * as TweetLib from './tweet.lib';
+import * as UserLib from '../users/user.lib';
 import { TweetLikeModel } from 'models/TweetLike';
 
 /**
@@ -287,6 +288,7 @@ export const cancelRetweet: RequestHandler = async (req, res, next) => {
  * @returns {Error} 10406 - 401 로그인이 필요합니다.
  * @returns {Error} 10508 - 400 내용이 없는 트윗입니다.
  * @returns {Error} 10501 - 404 존재하지 않는 트윗입니다.
+ * @returns {Error} 10509 - 400 댓글 권한이 없습니다.
  */
 export const createReply: RequestHandler = async (req, res, next) => {
   try {
@@ -302,10 +304,21 @@ export const createReply: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NO_CONTENT');
     }
 
-    const hasTweet = await tweetDatabase.has(reply_id);
+    const tweet = await tweetDatabase.get(reply_id);
 
-    if (!hasTweet) {
+    if (!tweet) {
       throw new Error('TWEETS_NOT_EXIST');
+    }
+
+    if (tweet.reply_permission === 'follower') {
+      const userFollowId = UserLib.getUserFollowId(
+        currentUserId,
+        tweet.writer_id,
+      );
+      const hasUserFollow = await userFollowDatabase.has(userFollowId);
+      if (!hasUserFollow) {
+        throw new Error('TWEETS_NO_REPLY_PERMISSION');
+      }
     }
 
     const replyId = await tweetDatabase.generateAutoId();
