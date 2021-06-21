@@ -310,7 +310,10 @@ export const createReply: RequestHandler = async (req, res, next) => {
       throw new Error('TWEETS_NOT_EXIST');
     }
 
-    if (tweet.reply_permission === 'follower') {
+    if (
+      currentUserId !== tweet.writer_id &&
+      tweet.reply_permission === 'follower'
+    ) {
       const userFollowId = UserLib.getUserFollowId(
         currentUserId,
         tweet.writer_id,
