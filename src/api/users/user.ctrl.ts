@@ -139,7 +139,7 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
     const tweetModelList = await tweetDatabase.queryAll(
       (collection) =>
         collection
-          .where('writer_id', '==', currentUserId)
+          .where('writer_id', '==', user_id)
           .orderBy('tweeted_at', 'desc')
           .limit(offset - 1 + count), // TODO: need to limit 'from'
     );
@@ -147,7 +147,7 @@ export const getUserFeed: RequestHandler = async (req, res, next) => {
     const retweetModelList = await retweetDatabase.queryAll(
       (collection) =>
         collection
-          .where('retweet_user_id', '==', currentUserId)
+          .where('retweet_user_id', '==', user_id)
           .orderBy('retweeted_at', 'desc')
           .limit(offset - 1 + count), // TODO: need to limit 'from'
     );
