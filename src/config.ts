@@ -1,6 +1,7 @@
 export default {
-  nodeEnv: process.env.NODE_ENV,
-  port: process.env.PORT,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: process.env.PORT || 8000,
+  jwtSecretKey: process.env.JWT_SECRET_KEY,
   firebase: {
     apiKey: process.env.FIREBASE_API_KEY,
     authDomain: process.env.FIREBASE_AUTH_DOMAIN,
